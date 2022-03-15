@@ -7,6 +7,7 @@ import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol';
+import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 
 
 
@@ -16,7 +17,7 @@ import '@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol';
  * @notice The NFT is basic ERC721 with an ownable usage to ensure only a single owner call mint new NFTs
  * @notice it uses the Enumerable extension to allow for easy lookup to pull balances of one account for multiple NFTs
  */
-contract CeloHedgeys is ERC721Enumerable {
+contract CeloHedgeys is ERC721Enumerable, ReentrancyGuard {
   using SafeERC20 for IERC20;
   using Counters for Counters.Counter;
   Counters.Counter private _tokenIds;
@@ -91,7 +92,7 @@ contract CeloHedgeys is ERC721Enumerable {
 
   /// @notice this is the external function that actually redeems an NFT position
   /// @dev this function calls the _redeemFuture(...) internal function which handles the requirements and checks
-  function redeemNFT(uint256 _id) external returns (bool) {
+  function redeemNFT(uint256 _id) external nonReentrant returns (bool) {
     _redeemNFT(msg.sender, _id);
     return true;
   }
@@ -110,9 +111,9 @@ contract CeloHedgeys is ERC721Enumerable {
     require(future.unlockDate < block.timestamp && future.amount > 0, 'HNEC05: Tokens are still locked');
     //delivers the vested tokens to the vester
     emit NFTRedeemed(_id, _holder, future.amount, future.token, future.unlockDate);
+    _burn(_id);
     SafeERC20.safeTransfer(IERC20(future.token), _holder, future.amount);
     delete futures[_id];
-    _burn(_id);
   }
 
   
