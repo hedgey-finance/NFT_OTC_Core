@@ -4,7 +4,7 @@ pragma solidity 0.8.7;
 /// @dev this is the one contract call that the OTC needs to interact with the NFT contract
 interface INFT {
   /// @notice function for publicly viewing a lockedToken (future) details
-  /// @param _f is the id of the NFT which is mapped to the future struct
+  /// @param _id is the id of the NFT which is mapped to the future struct
   /// @dev this returns the amount of tokens locked, the token address and the date that they are unlocked
   function futures(uint _id) external view returns (uint amount, address token, uint unlockDate);
 
