@@ -1,20 +1,48 @@
 import { expect } from 'chai';
-import { MockProvider } from 'ethereum-waffle';
-
 import { TestParameters, generateLabel, IIndexable } from '../helpers';
 import * as Constants from '../constants';
-import { otcFixture } from '../fixtures';
+import { ethers } from 'hardhat';
+import { Contract, ContractFactory } from 'ethers';
+import { WETH9, deployWeth } from '@thenextblock/hardhat-weth';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
 export default (params: TestParameters) => {
-  const provider = new MockProvider();
-  const [_, seller] = provider.getWallets();
+  let wallets: SignerWithAddress[];
+  let weth: WETH9;
+  let Token: ContractFactory;
+  let Otc: ContractFactory;
+  let otc: Contract;
+  let Nft: ContractFactory;
+  let nft: Contract;
+  let dummyTokens: IIndexable;
 
   it(generateLabel(params), async () => {
-    const fixture = await otcFixture(provider, [seller], false, params.isCelo);
-    const otc = fixture.otc;
+    const baseUrl = 'http://nft.hedgey.finance';
+    wallets = await ethers.getSigners();
+    const [owner] = wallets;
+    weth = await deployWeth(owner);
+    Token = await ethers.getContractFactory('Token');
+    Otc = await ethers.getContractFactory(
+      params.isCelo ? 'CeloHedgeyOTC' : 'HedgeyOTC'
+    );
+    Nft = await ethers.getContractFactory(
+      params.isCelo ? 'CeloHedgeys' : 'Hedgeys'
+    );
+    if (params.isCelo) {
+      nft = await Nft.deploy(baseUrl);
+      otc = await Otc.deploy(nft.address);
+    } else {
+      nft = await Nft.deploy(weth.address, baseUrl);
+      otc = await Otc.deploy(await nft.weth(), nft.address);
+    }
+    const tokenA = await Token.deploy(Constants.E18_1000, 18);
+    await tokenA.approve(otc.address, Constants.E18_100);
+    const tokenB = await Token.deploy(Constants.E18_1000, 18);
+    await tokenB.approve(otc.address, Constants.E18_100);
+    dummyTokens = { tokenA: tokenA, tokenB: tokenB, weth: weth };
 
-    const token = (fixture as IIndexable)[params.asset];
-    const paymentToken = (fixture as IIndexable)[params.payment];
+    const token = dummyTokens[params.asset];
+    const paymentToken = dummyTokens[params.payment];
     const assetAndPaymentMatch = token.address === paymentToken.address;
     const prePaymentBalance = await paymentToken.balanceOf(otc.address);
 
@@ -28,14 +56,24 @@ export default (params: TestParameters) => {
     const _buyer = params.buyer;
 
     await expect(
-      otc.create(_tokenAddress, _paymentCurrencyAddress, _amount, _min, _price, _maturity, _unlockDate, _buyer, {
-        value: params.asset === Constants.Tokens.Weth ? _amount : 0,
-      })
+      otc.create(
+        _tokenAddress,
+        _paymentCurrencyAddress,
+        _amount,
+        _min,
+        _price,
+        _maturity,
+        _unlockDate,
+        _buyer,
+        {
+          value: params.asset === Constants.Tokens.Weth ? _amount : 0,
+        }
+      )
     )
       .to.emit(otc, 'NewDeal')
       .withArgs(
         '0',
-        seller.address,
+        owner.address,
         _tokenAddress,
         _paymentCurrencyAddress,
         _amount,
@@ -49,7 +87,7 @@ export default (params: TestParameters) => {
 
     // Check our deal has been created
     const deal = await otc.deals(0);
-    expect(deal[0]).to.eq(seller.address);
+    expect(deal[0]).to.eq(owner.address);
     expect(deal[1]).to.eq(_tokenAddress);
     expect(deal[2]).to.eq(_paymentCurrencyAddress);
     expect(deal[3]).to.eq(_amount);

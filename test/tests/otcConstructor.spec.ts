@@ -1,45 +1,23 @@
-import { WETH9 } from '@thenextblock/hardhat-weth';
+import { deployWeth, WETH9 } from '@thenextblock/hardhat-weth';
 import { expect } from 'chai';
-import { MockProvider } from 'ethereum-waffle';
-import { Contract } from 'ethers';
+import { ethers } from 'hardhat';
+import { Contract, ContractFactory } from 'ethers';
 
-import * as Constants from '../constants';
-import { dealFixture } from '../fixtures';
-
-export default (isCelo: boolean = false) => {
+export default async () => {
+  let Otc: ContractFactory;
   let otc: Contract;
   let weth: WETH9;
+  let Nft: ContractFactory;
   let nft: Contract;
 
-  const provider = new MockProvider();
-  const [buyer, seller] = provider.getWallets();
-
-  const price = Constants.E18_10;
-  const amount = Constants.E18_10;
-  const min = Constants.E18_1;
-  const whitelist = Constants.ZERO_ADDRESS;
-
-  const maturity = Constants.IN_ONE_HOUR;
-  const unlockDate = Constants.IN_ONE_HOUR;
+  const [owner] = await ethers.getSigners();
 
   before(async () => {
-    const dealContract = await dealFixture(
-      provider,
-      [seller, buyer],
-      amount,
-      min,
-      price,
-      maturity,
-      unlockDate,
-      whitelist,
-      Constants.Tokens.TokenA,
-      Constants.Tokens.TokenB,
-      isCelo
-    );
-
-    otc = dealContract.otc;
-    weth = dealContract.weth;
-    nft = dealContract.nft;
+    weth = await deployWeth(owner);
+    Otc = await ethers.getContractFactory('HedgeyOTC');
+    Nft = await ethers.getContractFactory('Hedgeys');
+    nft = await Nft.deploy(weth.address, 'http://nft.hedgey.finance');
+    otc = await Otc.deploy(await nft.weth(), nft.address);
   });
 
   it('should have weth set', async () => {
