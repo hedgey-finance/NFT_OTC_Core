@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.7;
 
 /// @dev this is the one contract call that the OTC needs to interact with the NFT contract

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.7;
 
 /// @dev used for handling ETH wrapping into WETH to be stored in smart contracts upon deposit,
