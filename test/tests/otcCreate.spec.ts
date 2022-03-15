@@ -22,12 +22,8 @@ export default (params: TestParameters) => {
     const [owner] = wallets;
     weth = await deployWeth(owner);
     Token = await ethers.getContractFactory('Token');
-    Otc = await ethers.getContractFactory(
-      params.isCelo ? 'CeloHedgeyOTC' : 'HedgeyOTC'
-    );
-    Nft = await ethers.getContractFactory(
-      params.isCelo ? 'CeloHedgeys' : 'Hedgeys'
-    );
+    Otc = await ethers.getContractFactory(params.isCelo ? 'CeloHedgeyOTC' : 'HedgeyOTC');
+    Nft = await ethers.getContractFactory(params.isCelo ? 'CeloHedgeys' : 'Hedgeys');
     if (params.isCelo) {
       nft = await Nft.deploy(baseUrl);
       otc = await Otc.deploy(nft.address);
@@ -56,19 +52,9 @@ export default (params: TestParameters) => {
     const _buyer = params.buyer;
 
     await expect(
-      otc.create(
-        _tokenAddress,
-        _paymentCurrencyAddress,
-        _amount,
-        _min,
-        _price,
-        _maturity,
-        _unlockDate,
-        _buyer,
-        {
-          value: params.asset === Constants.Tokens.Weth ? _amount : 0,
-        }
-      )
+      otc.create(_tokenAddress, _paymentCurrencyAddress, _amount, _min, _price, _maturity, _unlockDate, _buyer, {
+        value: params.asset === Constants.Tokens.Weth ? _amount : 0,
+      })
     )
       .to.emit(otc, 'NewDeal')
       .withArgs(
