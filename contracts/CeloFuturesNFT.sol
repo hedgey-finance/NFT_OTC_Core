@@ -62,7 +62,7 @@ contract CeloHedgeys is ERC721Enumerable, ReentrancyGuard {
     /// @dev record the NFT miting with the newItemID coming from Counters library
     _safeMint(_holder, newItemId);
     /// @dev require that the amount is not 0, address is not the 0 address, and that the expiration date is actually beyond today
-    require(_amount > 0 && _token != address(0) && _unlockDate > block.timestamp, 'HEC01: NFT Minting Error');
+    require(_amount > 0 && _token != address(0) && _unlockDate > block.timestamp && _holder != address(0), 'HEC01: NFT Minting Error');
     /// @dev check our initial balance of this asset
     uint256 currentBalance = IERC20(_token).balanceOf(address(this));
     /// @dev pull the funds from the message sender
