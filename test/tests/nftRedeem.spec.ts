@@ -56,11 +56,6 @@ export default (isWeth: boolean, isCelo: boolean) => {
   });
 
   it('reverts if the tokens are not unlocked yet', async () => {
-<<<<<<< HEAD
-    //const fixture = await createdNFTFixture(provider, [wallet], isWeth, wallet, amount, unlockDate, isCelo);
-    //nft = fixture.nft;
-=======
->>>>>>> 13c9f58c674e70b6cd06ccecd8a9c7af7b95485e
     await expect(nft.redeemNFT('1')).to.be.revertedWith('HNEC05: Tokens are still locked');
   });
 };
