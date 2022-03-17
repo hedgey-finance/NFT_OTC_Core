@@ -3,16 +3,17 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { Contract, ContractFactory } from 'ethers';
 
-export default async () => {
+export default () => {
   let Otc: ContractFactory;
   let otc: Contract;
   let weth: WETH9;
   let Nft: ContractFactory;
   let nft: Contract;
 
-  const [owner] = await ethers.getSigners();
+  
 
   before(async () => {
+    const [owner] = await ethers.getSigners();
     weth = await deployWeth(owner);
     Otc = await ethers.getContractFactory('HedgeyOTC');
     Nft = await ethers.getContractFactory('Hedgeys');
