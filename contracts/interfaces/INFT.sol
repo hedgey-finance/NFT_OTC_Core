@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.7;
+pragma solidity ^0.8.13;
 
 /// @dev this is the one contract call that the OTC needs to interact with the NFT contract
 interface INFT {
@@ -35,5 +35,8 @@ interface INFT {
   
   /// @notice this event spits out the details of the NFT and future structe when an existing NFT and Future is redeemed
   event NFTRedeemed(uint256 _i, address _holder, uint256 _amount, address _token, uint256 _unlockDate);
+  
+  /// @notice this event is fired the one time when the baseURI is updated
+  event URISet(string newURI);
   
 }
