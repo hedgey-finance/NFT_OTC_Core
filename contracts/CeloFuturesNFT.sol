@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.7;
+pragma solidity 0.8.13;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import '@openzeppelin/contracts/utils/Counters.sol';
@@ -56,22 +56,22 @@ contract CeloHedgeys is ERC721Enumerable, ReentrancyGuard {
     uint256 _amount,
     address _token,
     uint256 _unlockDate
-  ) external returns (uint256) {
+  ) external nonReentrant returns (uint256) {
     _tokenIds.increment();
     uint256 newItemId = _tokenIds.current();
-    /// @dev record the NFT miting with the newItemID coming from Counters library
-    _safeMint(_holder, newItemId);
     /// @dev require that the amount is not 0, address is not the 0 address, and that the expiration date is actually beyond today
     require(_amount > 0 && _token != address(0) && _unlockDate > block.timestamp, 'HEC01: NFT Minting Error');
-    /// @dev check our initial balance of this asset
-    uint256 currentBalance = IERC20(_token).balanceOf(address(this));
     /// @dev pull the funds from the message sender
     require(IERC20(_token).balanceOf(address(msg.sender)) >= _amount, 'HNEC02: Insufficient Balance');
+    /// @dev using the same newItemID we generate a Future struct recording the token address (asset), the amount of tokens (amount), and time it can be unlocked (_expiry)
+    futures[newItemId] = Future(_amount, _token, _unlockDate);
+    /// @dev check our initial balance of this asset
+    uint256 currentBalance = IERC20(_token).balanceOf(address(this));
     SafeERC20.safeTransferFrom(IERC20(_token), msg.sender, address(this), _amount);
     uint256 postBalance = IERC20(_token).balanceOf(address(this));
     require(postBalance - currentBalance == _amount, 'HNEC03: Wrong amount');
-    /// @dev using the same newItemID we generate a Future struct recording the token address (asset), the amount of tokens (amount), and time it can be unlocked (_expiry)
-    futures[newItemId] = Future(_amount, _token, _unlockDate);
+    /// @dev record the NFT miting with the newItemID coming from Counters library
+    _safeMint(_holder, newItemId);
     emit NFTCreated(newItemId, _holder, _amount, _token, _unlockDate);
     return newItemId;
   }
@@ -88,6 +88,7 @@ contract CeloHedgeys is ERC721Enumerable, ReentrancyGuard {
     require(uriSet == 0, 'HNEC06: uri already set');
     baseURI = _uri;
     uriSet = 1;
+    emit URISet(uri);
   }
 
   /// @notice this is the external function that actually redeems an NFT position
@@ -121,4 +122,5 @@ contract CeloHedgeys is ERC721Enumerable, ReentrancyGuard {
   ///@notice Events when a new NFT (future) is created and one with a Future is redeemed (burned)
   event NFTCreated(uint256 _i, address _holder, uint256 _amount, address _token, uint256 _unlockDate);
   event NFTRedeemed(uint256 _i, address _holder, uint256 _amount, address _token, uint256 _unlockDate);
+  event URISet(string newURI);
 }

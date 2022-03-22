@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.7;
+pragma solidity 0.8.13;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
@@ -90,7 +90,7 @@ contract CeloHedgeyOTC is ReentrancyGuard {
     uint256 _maturity,
     uint256 _unlockDate,
     address _buyer
-  ) external {
+  ) external nonReentrant {
     require(_maturity > block.timestamp, 'HEC01: Maturity before block timestamp');
     require(_amount >= _min, 'HEC02: Amount less than minium');
     /// @dev this checks to make sure that if someone purchases the minimum amount, it is never equal to 0
@@ -165,7 +165,7 @@ contract CeloHedgeyOTC is ReentrancyGuard {
    */
   function buy(uint256 _d, uint256 _amount) external nonReentrant {
     /// @dev pull the deal details from storage
-    Deal storage deal = deals[_d];
+    Deal memory deal = deals[_d];
     /// @dev we do not let the seller sell to themselves, must be a separate buyer
     require(msg.sender != deal.seller, 'HEC07: Buyer cannot be seller');
     /// @dev require that the deal order is still valid by checking the open bool, as well as the maturity of the deal being in the future block time
