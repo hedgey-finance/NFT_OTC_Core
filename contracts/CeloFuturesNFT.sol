@@ -88,7 +88,7 @@ contract CeloHedgeys is ERC721Enumerable, ReentrancyGuard {
     require(uriSet == 0, 'HNEC06: uri already set');
     baseURI = _uri;
     uriSet = 1;
-    emit URISet(uri);
+    emit URISet(_uri);
   }
 
   /// @notice this is the external function that actually redeems an NFT position
