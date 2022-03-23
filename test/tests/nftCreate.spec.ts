@@ -75,7 +75,7 @@ export default (isCelo: boolean = false) => {
     const nft = fixture.nft;
 
     await expect(nft.createNFT(wallet.address, Constants.E18_1000, token.address, unlockDate)).to.be.revertedWith(
-      'HNEC02: Insufficient Balance'
+      'LIB02: Insufficient Balance'
     );
   });
 
@@ -84,6 +84,6 @@ export default (isCelo: boolean = false) => {
     const nft = fixture.nft;
     const burn = fixture.burn;
 
-    expect(nft.createNFT(wallet.address, amount, burn.address, unlockDate)).to.be.revertedWith('HNEC03: Wrong amount');
+    expect(nft.createNFT(wallet.address, amount, burn.address, unlockDate)).to.be.revertedWith('LIB03: Token Imbalance');
   });
 };

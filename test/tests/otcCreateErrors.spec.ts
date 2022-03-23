@@ -149,7 +149,7 @@ export default (isCelo: boolean = false) => {
       unlockDate: Constants.IN_ONE_HOUR,
       whitelist: Constants.ZERO_ADDRESS,
       purchaseAmount: Constants.E18_1,
-      expectedError: 'HECA: Incorrect Transfer Value',
+      expectedError: 'LIB01: Incorrect Transfer Value',
       label: "reverts if seller's token is weth and there's a small amount of eth in msg.value",
       txValue: {
         value: utils.parseEther('0.001'),
@@ -169,7 +169,7 @@ export default (isCelo: boolean = false) => {
       unlockDate: Constants.IN_ONE_HOUR,
       whitelist: Constants.ZERO_ADDRESS,
       purchaseAmount: Constants.E18_1,
-      expectedError: 'HECA: Incorrect Transfer Value',
+      expectedError: 'LIB01: Incorrect Transfer Value',
       label: "reverts if seller's token is weth and there's a large amount of eth in msg.value",
       txValue: {
         value: utils.parseEther('500'),
@@ -188,7 +188,7 @@ export default (isCelo: boolean = false) => {
       unlockDate: Constants.IN_ONE_HOUR,
       whitelist: Constants.ZERO_ADDRESS,
       purchaseAmount: Constants.E18_1,
-      expectedError: 'HECB: Insufficient Balance',
+      expectedError: 'LIB02: Insufficient Balance',
       label: "reverts if seller's token is ERC20 but wallet has insufficient balance",
     },
     {
@@ -204,6 +204,7 @@ export default (isCelo: boolean = false) => {
       unlockDate: Constants.IN_ONE_HOUR,
       whitelist: Constants.ZERO_ADDRESS,
       purchaseAmount: Constants.E18_1,
+      expectedError: 'LIB03: Token Imbalance',
       label: "reverts if seller's token is a tax or deflationary token",
     },
     {

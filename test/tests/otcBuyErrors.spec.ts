@@ -126,7 +126,7 @@ export default (isCelo: boolean = false) => {
       unlockDate: Constants.IN_ONE_HOUR,
       whitelist: Constants.ZERO_ADDRESS,
       purchaseAmount: Constants.E18_10,
-      expectedError: 'HECB: Insufficient Balance',
+      expectedError: 'LIB02: Insufficient Balance',
       label: 'should be reverted when buyer has insufficient balance',
       closed: false,
       isCelo,

@@ -3,11 +3,11 @@ pragma solidity 0.8.13;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import '@openzeppelin/contracts/utils/Counters.sol';
-import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
+import './libraries/TransferHelper.sol';
 
 
 
@@ -61,15 +61,11 @@ contract CeloHedgeys is ERC721Enumerable, ReentrancyGuard {
     uint256 newItemId = _tokenIds.current();
     /// @dev require that the amount is not 0, address is not the 0 address, and that the expiration date is actually beyond today
     require(_amount > 0 && _token != address(0) && _unlockDate > block.timestamp, 'HEC01: NFT Minting Error');
-    /// @dev pull the funds from the message sender
-    require(IERC20(_token).balanceOf(address(msg.sender)) >= _amount, 'HNEC02: Insufficient Balance');
     /// @dev using the same newItemID we generate a Future struct recording the token address (asset), the amount of tokens (amount), and time it can be unlocked (_expiry)
     futures[newItemId] = Future(_amount, _token, _unlockDate);
-    /// @dev check our initial balance of this asset
-    uint256 currentBalance = IERC20(_token).balanceOf(address(this));
-    SafeERC20.safeTransferFrom(IERC20(_token), msg.sender, address(this), _amount);
-    uint256 postBalance = IERC20(_token).balanceOf(address(this));
-    require(postBalance - currentBalance == _amount, 'HNEC03: Wrong amount');
+    /// @dev pulls funds from the msg.sender into this contract for escrow
+    bool success = TransferHelper.transferTokens(_token, msg.sender, address(this), _amount);
+    require(success, "Deposit error");
     /// @dev record the NFT miting with the newItemID coming from Counters library
     _safeMint(_holder, newItemId);
     emit NFTCreated(newItemId, _holder, _amount, _token, _unlockDate);
@@ -110,9 +106,9 @@ contract CeloHedgeys is ERC721Enumerable, ReentrancyGuard {
     require(ownerOf(_id) == _holder, 'HNEC04: Only the NFT Owner');
     Future storage future = futures[_id];
     require(future.unlockDate < block.timestamp && future.amount > 0, 'HNEC05: Tokens are still locked');
-    //delivers the vested tokens to the vester
     emit NFTRedeemed(_id, _holder, future.amount, future.token, future.unlockDate);
     _burn(_id);
+    /// @dev now we deliver the tokens back to the vester
     SafeERC20.safeTransfer(IERC20(future.token), _holder, future.amount);
     delete futures[_id];
   }

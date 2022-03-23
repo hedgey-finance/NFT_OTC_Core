@@ -89,7 +89,7 @@ export default (isCelo: boolean = false) => {
       unlockDate: Constants.IN_ONE_HOUR,
       whitelist: Constants.ZERO_ADDRESS,
       purchaseAmount: Constants.E18_1,
-      expectedError: 'HEC05: All tokens have been sold',
+      expectedError: 'HEC04: Only Seller Can Close',
       label: 'reverts if all tokens in the deal have been sold',
     },
     {
@@ -105,7 +105,7 @@ export default (isCelo: boolean = false) => {
       unlockDate: Constants.IN_ONE_HOUR,
       whitelist: Constants.ZERO_ADDRESS,
       purchaseAmount: Constants.E18_1,
-      expectedError: 'HEC05: All tokens have been sold',
+      expectedError: 'HEC04: Only Seller Can Close',
       label: 'reverts if deal has been closed',
     },
   ];

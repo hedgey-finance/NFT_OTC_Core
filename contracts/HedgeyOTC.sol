@@ -4,9 +4,9 @@ pragma solidity 0.8.13;
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
-import './interfaces/IWETH.sol';
 import './interfaces/Decimals.sol';
 import './interfaces/INFT.sol';
+import './libraries/TransferHelper.sol';
 
 
 
@@ -68,45 +68,6 @@ contract HedgeyOTC is ReentrancyGuard {
 
   receive() external payable {}
 
-  /// @dev internal function that handles transfering payments from buyers to sellers with special WETH handling
-  /// @dev this function assumes that if the recipient address is a contract, it cannot handle ETH - so we always deliver WETH
-  /// @dev special care needs to be taken when using contract addresses to sell deals - to ensure it can handle WETH properly when received
-  function _transferPymt(
-    address _token,
-    address from,
-    address payable to,
-    uint256 _amt
-  ) internal {
-    if (_token == weth) {
-      if (!Address.isContract(to)) {
-        to.transfer(_amt);
-      } else {
-        // we want to deliver WETH from ETH here for better handling at contract
-        IWETH(weth).deposit{value: _amt}();
-        assert(IWETH(weth).transfer(to, _amt));
-      }
-    } else {
-      SafeERC20.safeTransferFrom(IERC20(_token), from, to, _amt);
-    }
-  }
-
-  /// @dev internal funciton that handles withdrawing tokens that are up for sale to buyers
-  /// @dev this function is only called if the tokens are not timelocked
-  /// @dev this function handles weth specially and delivers ETH to the recipient
-  function _withdraw(
-    address _token,
-    address payable to,
-    uint256 _amt
-  ) internal {
-    if (_token == weth) {
-      IWETH(weth).withdraw(_amt);
-      (bool success, ) = to.call{value: _amt}("");
-      require(success, "Transfer failed.");
-      //to.transfer(_amt);
-    } else {
-      SafeERC20.safeTransfer(IERC20(_token), to, _amt);
-    }
-  }
 
   /**
    * @notice This function is what the seller uses to create a new OTC offering
@@ -141,20 +102,6 @@ contract HedgeyOTC is ReentrancyGuard {
     /// @dev where someone could find a small enough minimum to purchase all of the tokens for free.
     require((_min * _price) / (10**Decimals(_token).decimals()) > 0, 'HEC03: Minimum smaller than 0');
     /// @dev we check the before balance of this address for security - this includes checking the WETH balance
-    uint256 currentBalance = IERC20(_token).balanceOf(address(this));
-    /// @dev this function physically pulls the tokens into the contract for escrow
-    if (_token == weth) {
-      require(msg.value == _amount, 'HECA: Incorrect Transfer Value');
-      IWETH(weth).deposit{value: _amount}();
-      assert(IWETH(weth).transfer(address(this), _amount));
-    } else {
-      require(IERC20(_token).balanceOf(msg.sender) >= _amount, 'HECB: Insufficient Balance');
-      SafeERC20.safeTransferFrom(IERC20(_token), msg.sender, address(this), _amount);
-    }
-    /// @dev check the current balance now that the tokens should be in the contract address, including WETH balance to ensure the deposit function worked
-    /// @dev we need to ensure that the balance matches the amount input into the parameters - since that amount is recorded on the Deal struct
-    uint256 postBalance = IERC20(_token).balanceOf(address(this));
-    assert(postBalance - currentBalance == _amount);
     /// @dev creates the Deal struct with all of the parameters for inputs - and set the bool 'open' to true so that this offer can now be purchased
     deals[d++] = Deal(
       msg.sender,
@@ -168,6 +115,9 @@ contract HedgeyOTC is ReentrancyGuard {
       true,
       _buyer
     );
+    /// @dev pulls the tokens into this contract so that they can be purchased
+    bool success = TransferHelper.transferPayment(weth, _token, payable(msg.sender), payable(address(this)), _amount);
+    require(success, "Transfer error");
     emit NewDeal(
       d - 1,
       msg.sender,
@@ -192,15 +142,16 @@ contract HedgeyOTC is ReentrancyGuard {
    * @param _d is the dealID that is mapped to the Struct Deal 
    */
   function close(uint256 _d) external nonReentrant {
-    Deal storage deal = deals[_d];
+    Deal memory deal = deals[_d];
     require(msg.sender == deal.seller, 'HEC04: Only Seller Can Close');
     require(deal.remainingAmount > 0, 'HEC05: All tokens have been sold');
     require(deal.open, 'HEC06: Deal has been closed');
-    /// @dev once we have confirmed it is the seller and there are remaining tokens - physically pull the remaining balances and deliver to the seller
-    _withdraw(deal.token, payable(msg.sender), deal.remainingAmount);
-    /// @dev we now set the remaining amount to 0 and ensure the open flag is set to false, thus this deal can no longer be interacted with
-    deal.remainingAmount = 0;
-    deal.open = false;
+    /// @dev once we have confirmed it is the seller and there are remaining tokens -
+    //_withdraw(deal.token, payable(msg.sender), deal.remainingAmount);
+    /// @dev delete the struct so it can no longer be used
+    delete deals[_d];
+    bool success = TransferHelper.withdraw(weth, deal.token, payable(msg.sender), deal.remainingAmount);
+    require(success, "Withdraw error");
     emit DealClosed(_d);
   }
 
@@ -233,23 +184,24 @@ contract HedgeyOTC is ReentrancyGuard {
     /// @dev then multiply the amount by the per token price, and now to get back to an amount denominated in the payment currency divide by the factor of token decimals
     uint256 decimals = Decimals(deal.token).decimals();
     uint256 purchase = (_amount * deal.price) / (10**decimals);
-    /// @dev check to ensure the buyer actually has enough money to make the purchase
-    uint256 balanceCheck = (deal.paymentCurrency == weth)
-      ? msg.value
-      : IERC20(deal.paymentCurrency).balanceOf(msg.sender);
-    require(balanceCheck >= purchase, 'HECB: Insufficient Balance');
-    /// @dev transfer the purchase to the deal seller
-    _transferPymt(deal.paymentCurrency, msg.sender, payable(deal.seller), purchase);
+    bool success = TransferHelper.transferPayment(weth, deal.paymentCurrency, msg.sender, payable(deal.seller), purchase);
+    require(success, "Transfer error");
     if (deal.unlockDate > block.timestamp) {
       /// @dev if the unlockdate is the in future, then we call our internal function lockTokens to lock those in the NFT contract
-      _lockTokens(payable(msg.sender), deal.token, _amount, deal.unlockDate);
+      bool locked = _lockTokens(payable(msg.sender), deal.token, _amount, deal.unlockDate);
+      require(locked, "Lock error");
     } else {
       /// @dev if the unlockDate is in the past or now - then tokens are already unlocked and delivered directly to the buyer
-      _withdraw(deal.token, payable(msg.sender), _amount);
+      bool _success = TransferHelper.withdraw(weth, deal.token, payable(msg.sender), _amount);
+      require(_success, "Withdraw error");
     }
     /// @dev reduce the deal remaining amount by how much was purchased. If the remainder is 0, then we consider this deal closed and set our open bool to false
     deal.remainingAmount -= _amount;
-    if (deal.remainingAmount == 0) deal.open = false;
+    if (deal.remainingAmount == 0) {
+      delete deals[_d];
+    } else {
+      deals[_d].remainingAmount = deal.remainingAmount;
+    }
     emit TokensBought(_d, _amount, deal.remainingAmount);
   }
 
@@ -263,7 +215,7 @@ contract HedgeyOTC is ReentrancyGuard {
     address _token,
     uint256 _amount,
     uint256 _unlockDate
-  ) internal {
+  ) internal returns (bool) {
     require(_unlockDate > block.timestamp, 'HEC10: Unlocked');
     /// @dev similar to checking the balances for the OTC contract when creating a new deal - we check the current and post balance in the NFT contract
     /// @dev to ensure that 100% of the amount of tokens to be locked are in fact locked in the contract address
@@ -278,6 +230,7 @@ contract HedgeyOTC is ReentrancyGuard {
     uint256 postBalance = IERC20(_token).balanceOf(futureContract);
     assert(postBalance - currentBalance == _amount);
     emit FutureCreated(_owner, _token, _unlockDate, _amount);
+    return true;
   }
 
   /// @dev events for each function

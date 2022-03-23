@@ -3,12 +3,11 @@ pragma solidity 0.8.13;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import '@openzeppelin/contracts/utils/Counters.sol';
-import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
-import './interfaces/IWETH.sol';
+import './libraries/TransferHelper.sol';
 
 
 /**
@@ -45,24 +44,6 @@ contract Hedgeys is ERC721Enumerable, ReentrancyGuard {
   receive() external payable {}
 
 
-  /// @dev internal function used to withdraw locked tokens and send them to an address
-  /// @dev this contract stores WETH instead of ETH to represent ETH
-  /// @dev which means that if we are delivering ETH back out, we will convert the WETH first and then transfer the ETH to the recipiient
-  /// @dev if the tokens are not WETH, then we simply safely transfer them back out to the address
-  function _withdraw(
-    address _token,
-    address payable to,
-    uint256 _amt
-  ) internal {
-    if (_token == weth) {
-      IWETH(weth).withdraw(_amt);
-      (bool success, ) = to.call{value: _amt}("");
-      require(success, "Transfer failed.");
-    } else {
-      SafeERC20.safeTransfer(IERC20(_token), to, _amt);
-    }
-  }
-
   /**
    * @notice The external function creates a Future position
    * @notice This funciton does not accept ETH, must send in wrapped ETH to lock ETH
@@ -84,16 +65,11 @@ contract Hedgeys is ERC721Enumerable, ReentrancyGuard {
     uint256 newItemId = _tokenIds.current();
     /// @dev require that the amount is not 0, address is not the 0 address, and that the expiration date is actually beyond today
     require(_amount > 0 && _token != address(0) && _unlockDate > block.timestamp, 'HEC01: NFT Minting Error');
-    /// @dev pull the funds from the message sender
-    require(IERC20(_token).balanceOf(address(msg.sender)) >= _amount, 'HNEC02: Insufficient Balance');
     /// @dev using the same newItemID we generate a Future struct recording the token address (asset), the amount of tokens (amount), and time it can be unlocked (_expiry)
     futures[newItemId] = Future(_amount, _token, _unlockDate);
-    /// @dev check our initial balance of this asset
-    uint256 currentBalance = IERC20(_token).balanceOf(address(this));
-    SafeERC20.safeTransferFrom(IERC20(_token), msg.sender, address(this), _amount);
-    uint256 postBalance = IERC20(_token).balanceOf(address(this));
-    require(postBalance - currentBalance == _amount, 'HNEC03: Wrong amount');
-    /// @dev record the NFT miting with the newItemID coming from Counters library
+    /// @dev pulls funds from the msg.sender into this contract for escrow
+    bool success = TransferHelper.transferTokens(_token, msg.sender, address(this), _amount);
+    require(success, "Deposit error");
     _safeMint(_holder, newItemId);
     emit NFTCreated(newItemId, _holder, _amount, _token, _unlockDate);
     return newItemId;
@@ -136,7 +112,8 @@ contract Hedgeys is ERC721Enumerable, ReentrancyGuard {
     //delivers the vested tokens to the vester
     emit NFTRedeemed(_id, _holder, future.amount, future.token, future.unlockDate);
     _burn(_id);
-    _withdraw(future.token, _holder, future.amount);
+    bool success = TransferHelper.withdraw(weth, future.token, _holder, future.amount);
+    require(success, "Withdraw error");
     delete futures[_id];
   }
 
