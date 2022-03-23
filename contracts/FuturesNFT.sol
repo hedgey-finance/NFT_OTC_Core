@@ -3,12 +3,9 @@ pragma solidity 0.8.13;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import '@openzeppelin/contracts/utils/Counters.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import './libraries/TransferHelper.sol';
-
 
 /**
  * @title An NFT representation of ownership of time locked tokens
@@ -43,7 +40,6 @@ contract Hedgeys is ERC721Enumerable, ReentrancyGuard {
 
   receive() external payable {}
 
-
   /**
    * @notice The external function creates a Future position
    * @notice This funciton does not accept ETH, must send in wrapped ETH to lock ETH
@@ -64,12 +60,11 @@ contract Hedgeys is ERC721Enumerable, ReentrancyGuard {
     _tokenIds.increment();
     uint256 newItemId = _tokenIds.current();
     /// @dev require that the amount is not 0, address is not the 0 address, and that the expiration date is actually beyond today
-    require(_amount > 0 && _token != address(0) && _unlockDate > block.timestamp, 'HEC01: NFT Minting Error');
+    require(_amount > 0 && _token != address(0) && _unlockDate > block.timestamp, 'NFT01');
     /// @dev using the same newItemID we generate a Future struct recording the token address (asset), the amount of tokens (amount), and time it can be unlocked (_expiry)
     futures[newItemId] = Future(_amount, _token, _unlockDate);
     /// @dev pulls funds from the msg.sender into this contract for escrow
-    bool success = TransferHelper.transferTokens(_token, msg.sender, address(this), _amount);
-    require(success, "Deposit error");
+    TransferHelper.transferTokens(_token, msg.sender, address(this), _amount);
     _safeMint(_holder, newItemId);
     emit NFTCreated(newItemId, _holder, _amount, _token, _unlockDate);
     return newItemId;
@@ -84,7 +79,7 @@ contract Hedgeys is ERC721Enumerable, ReentrancyGuard {
   /// @dev there is no actual on-chain functions that require this URI to be anything beyond a blank string ("")
   /// @dev there are no vulnerabilities should this be changed as it is for astetic purposes only
   function updateBaseURI(string memory _uri) external {
-    require(uriSet == 0, 'HNEC06: uri already set');
+    require(uriSet == 0, 'NFT02');
     baseURI = _uri;
     uriSet = 1;
     emit URISet(_uri);
@@ -106,18 +101,15 @@ contract Hedgeys is ERC721Enumerable, ReentrancyGuard {
    * @dev 5) it withdraws the tokens that have been locked - delivering them to the current owner of the NFT
    */
   function _redeemNFT(address payable _holder, uint256 _id) internal {
-    require(ownerOf(_id) == _holder, 'HNEC04: Only the NFT Owner');
+    require(ownerOf(_id) == _holder, 'NFT03');
     Future memory future = futures[_id];
-    require(future.unlockDate < block.timestamp && future.amount > 0, 'HNEC05: Tokens are still locked');
+    require(future.unlockDate < block.timestamp && future.amount > 0, 'NFT04');
     //delivers the vested tokens to the vester
     emit NFTRedeemed(_id, _holder, future.amount, future.token, future.unlockDate);
     _burn(_id);
-    bool success = TransferHelper.withdraw(weth, future.token, _holder, future.amount);
-    require(success, "Withdraw error");
+    TransferHelper.withdrawPayment(weth, future.token, _holder, future.amount);
     delete futures[_id];
   }
-
-  
 
   ///@notice Events when a new NFT (future) is created and one with a Future is redeemed (burned)
   event NFTCreated(uint256 _i, address _holder, uint256 _amount, address _token, uint256 _unlockDate);

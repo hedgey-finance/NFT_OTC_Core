@@ -39,6 +39,5 @@ export default (isCelo: boolean = false) => {
 
     const deal = await otc.deals(0);
     expect(deal[3]).to.eq('0'); //remainder == 0
-    expect(deal[8]).to.eq(false); //bool set to false
   });
 };

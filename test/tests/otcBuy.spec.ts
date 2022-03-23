@@ -66,9 +66,6 @@ export default (params: TestParameters) => {
     else if (params.asset === params.payment) expect(preSellerBalance).to.eq(postSellerBalance.sub(_amount));
     else expect(preSellerBalance).to.eq(postSellerBalance);
 
-    const deal = await otc.deals(0);
-
-    expect(deal[8]).to.eq(false); //bool set to false
     expect(await token.balanceOf(otc.address)).to.eq('0');
     expect(await paymentToken.balanceOf(otc.address)).to.eq('0');
 

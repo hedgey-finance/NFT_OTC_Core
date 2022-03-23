@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.13;
 
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import './interfaces/Decimals.sol';
-import './interfaces/INFT.sol';
 import './libraries/TransferHelper.sol';
-
-
+import './libraries/NFTHelper.sol';
 
 /**
  * @title HedgeyOTC is an over the counter contract with time locking abilitiy
@@ -59,7 +55,6 @@ contract HedgeyOTC is ReentrancyGuard {
     uint256 price;
     uint256 maturity;
     uint256 unlockDate;
-    bool open;
     address buyer;
   }
 
@@ -67,7 +62,6 @@ contract HedgeyOTC is ReentrancyGuard {
   mapping(uint256 => Deal) public deals;
 
   receive() external payable {}
-
 
   /**
    * @notice This function is what the seller uses to create a new OTC offering
@@ -95,42 +89,18 @@ contract HedgeyOTC is ReentrancyGuard {
     uint256 _maturity,
     uint256 _unlockDate,
     address payable _buyer
-  ) external nonReentrant payable {
-    require(_maturity > block.timestamp, 'HEC01: Maturity before block timestamp');
-    require(_amount >= _min, 'HEC02: Amount less than minium');
+  ) external payable nonReentrant {
+    require(_maturity > block.timestamp, 'OTC01');
+    require(_amount >= _min, 'OTC02');
     /// @dev this checks to make sure that if someone purchases the minimum amount, it is never equal to 0
     /// @dev where someone could find a small enough minimum to purchase all of the tokens for free.
-    require((_min * _price) / (10**Decimals(_token).decimals()) > 0, 'HEC03: Minimum smaller than 0');
+    require((_min * _price) / (10**Decimals(_token).decimals()) > 0, 'OTC03');
     /// @dev we check the before balance of this address for security - this includes checking the WETH balance
     /// @dev creates the Deal struct with all of the parameters for inputs - and set the bool 'open' to true so that this offer can now be purchased
-    deals[d++] = Deal(
-      msg.sender,
-      _token,
-      _paymentCurrency,
-      _amount,
-      _min,
-      _price,
-      _maturity,
-      _unlockDate,
-      true,
-      _buyer
-    );
+    deals[d++] = Deal(msg.sender, _token, _paymentCurrency, _amount, _min, _price, _maturity, _unlockDate, _buyer);
     /// @dev pulls the tokens into this contract so that they can be purchased
-    bool success = TransferHelper.transferPayment(weth, _token, payable(msg.sender), payable(address(this)), _amount);
-    require(success, "Transfer error");
-    emit NewDeal(
-      d - 1,
-      msg.sender,
-      _token,
-      _paymentCurrency,
-      _amount,
-      _min,
-      _price,
-      _maturity,
-      _unlockDate,
-      true,
-      _buyer
-    );
+    TransferHelper.transferPayment(weth, _token, payable(msg.sender), payable(address(this)), _amount);
+    emit NewDeal(d - 1, msg.sender, _token, _paymentCurrency, _amount, _min, _price, _maturity, _unlockDate, _buyer);
   }
 
   /**
@@ -139,19 +109,17 @@ contract HedgeyOTC is ReentrancyGuard {
    * @notice all that is required is that the deal is still open, and that there is still a reamining balance
    * @dev you need to know the index _d of the deal you are trying to close and that is it
    * @dev only the seller can close this deal
-   * @param _d is the dealID that is mapped to the Struct Deal 
+   * @param _d is the dealID that is mapped to the Struct Deal
    */
   function close(uint256 _d) external nonReentrant {
     Deal memory deal = deals[_d];
-    require(msg.sender == deal.seller, 'HEC04: Only Seller Can Close');
-    require(deal.remainingAmount > 0, 'HEC05: All tokens have been sold');
-    require(deal.open, 'HEC06: Deal has been closed');
+    require(msg.sender == deal.seller, 'OTC04');
+    require(deal.remainingAmount > 0, 'OTC05');
     /// @dev once we have confirmed it is the seller and there are remaining tokens -
     //_withdraw(deal.token, payable(msg.sender), deal.remainingAmount);
     /// @dev delete the struct so it can no longer be used
     delete deals[_d];
-    bool success = TransferHelper.withdraw(weth, deal.token, payable(msg.sender), deal.remainingAmount);
-    require(success, "Withdraw error");
+    TransferHelper.withdrawPayment(weth, deal.token, payable(msg.sender), deal.remainingAmount);
     emit DealClosed(_d);
   }
 
@@ -169,31 +137,29 @@ contract HedgeyOTC is ReentrancyGuard {
     /// @dev pull the deal details from storage
     Deal memory deal = deals[_d];
     /// @dev we do not let the seller sell to themselves, must be a separate buyer
-    require(msg.sender != deal.seller, 'HEC07: Buyer cannot be seller');
-    /// @dev require that the deal order is still valid by checking the open bool, as well as the maturity of the deal being in the future block time
-    require(deal.open && deal.maturity >= block.timestamp, 'HEC06: Deal has been closed');
+    require(msg.sender != deal.seller, 'OTC06');
+    /// @dev require that the deal order is still valid by checking if the block time is not passed the maturity date
+    require(deal.maturity >= block.timestamp, 'OTC07');
     /// @dev if the deal had a whitelist - then require the msg.sender to be that buyer, otherwise if there was no whitelist, anyone can buy
-    require(msg.sender == deal.buyer || deal.buyer == address(0x0), 'HEC08: Whitelist or buyer allowance error');
+    require(msg.sender == deal.buyer || deal.buyer == address(0x0), 'OTC08');
     /// @dev require that the amount being purchased is greater than the deal minimum, or that the amount being purchased is the entire remainder of whats left
     /// @dev AND require that the remaining amount in the deal actually equals or exceeds what the buyer wants to purchase
     require(
       (_amount >= deal.minimumPurchase || _amount == deal.remainingAmount) && deal.remainingAmount >= _amount,
-      'HEC09: Insufficient Purchase Size'
+      'OTC09'
     );
     /// @dev we calculate the purchase amount taking the decimals from the token first
     /// @dev then multiply the amount by the per token price, and now to get back to an amount denominated in the payment currency divide by the factor of token decimals
     uint256 decimals = Decimals(deal.token).decimals();
     uint256 purchase = (_amount * deal.price) / (10**decimals);
-    bool success = TransferHelper.transferPayment(weth, deal.paymentCurrency, msg.sender, payable(deal.seller), purchase);
-    require(success, "Transfer error");
+    TransferHelper.transferPayment(weth, deal.paymentCurrency, msg.sender, payable(deal.seller), purchase);
     if (deal.unlockDate > block.timestamp) {
       /// @dev if the unlockdate is the in future, then we call our internal function lockTokens to lock those in the NFT contract
-      bool locked = _lockTokens(payable(msg.sender), deal.token, _amount, deal.unlockDate);
-      require(locked, "Lock error");
+      NFTHelper.lockTokens(futureContract, msg.sender, deal.token, _amount, deal.unlockDate);
+      emit FutureCreated(msg.sender, deal.token, _amount, deal.unlockDate);
     } else {
       /// @dev if the unlockDate is in the past or now - then tokens are already unlocked and delivered directly to the buyer
-      bool _success = TransferHelper.withdraw(weth, deal.token, payable(msg.sender), _amount);
-      require(_success, "Withdraw error");
+      TransferHelper.withdrawPayment(weth, deal.token, payable(msg.sender), _amount);
     }
     /// @dev reduce the deal remaining amount by how much was purchased. If the remainder is 0, then we consider this deal closed and set our open bool to false
     deal.remainingAmount -= _amount;
@@ -203,34 +169,6 @@ contract HedgeyOTC is ReentrancyGuard {
       deals[_d].remainingAmount = deal.remainingAmount;
     }
     emit TokensBought(_d, _amount, deal.remainingAmount);
-  }
-
-  /// @dev internal function that handles the locking of the tokens in the NFT Futures contract
-  /// @param _owner address here becomes the owner of the NFT
-  /// @param _token address here is the asset that is locked in the NFT Future
-  /// @param _amount is the amount of tokens that will be locked
-  /// @param _unlockDate provides the unlock date which is the expiration date for the Future generated
-  function _lockTokens(
-    address payable _owner,
-    address _token,
-    uint256 _amount,
-    uint256 _unlockDate
-  ) internal returns (bool) {
-    require(_unlockDate > block.timestamp, 'HEC10: Unlocked');
-    /// @dev similar to checking the balances for the OTC contract when creating a new deal - we check the current and post balance in the NFT contract
-    /// @dev to ensure that 100% of the amount of tokens to be locked are in fact locked in the contract address
-    uint256 currentBalance = IERC20(_token).balanceOf(futureContract);
-    /// @dev increase allowance so that the NFT contract can pull the total funds
-    /// @dev this is a safer way to ensure that the entire amount is delivered to the NFT contract
-    SafeERC20.safeIncreaseAllowance(IERC20(_token), futureContract, _amount);
-    /// @dev this function points to the NFT Futures contract and calls its function to mint an NFT and generate the locked tokens future struct
-    INFT(futureContract).createNFT(_owner, _amount, _token, _unlockDate);
-    /// @dev check to make sure that what is received by the futures contract equals the total amount we have delivered
-    /// @dev this prevents functionality with deflationary or tax tokens that have not whitelisted these address
-    uint256 postBalance = IERC20(_token).balanceOf(futureContract);
-    assert(postBalance - currentBalance == _amount);
-    emit FutureCreated(_owner, _token, _unlockDate, _amount);
-    return true;
   }
 
   /// @dev events for each function
@@ -244,10 +182,9 @@ contract HedgeyOTC is ReentrancyGuard {
     uint256 _price,
     uint256 _maturity,
     uint256 _unlockDate,
-    bool open,
     address _buyer
   );
   event TokensBought(uint256 _d, uint256 _amount, uint256 _remainingAmount);
   event DealClosed(uint256 _d);
-  event FutureCreated(address _owner, address _token, uint256 _unlockDate, uint256 _amount);
+  event FutureCreated(address _owner, address _token, uint256 _amount, uint256 _unlockDate);
 }

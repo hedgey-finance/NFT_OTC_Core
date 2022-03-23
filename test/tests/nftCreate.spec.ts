@@ -45,18 +45,14 @@ export default (isCelo: boolean = false) => {
     const token = fixture.token;
     const nft = fixture.nft;
 
-    await expect(nft.createNFT(wallet.address, '0', token.address, unlockDate)).to.be.revertedWith(
-      'HEC01: NFT Minting Error'
-    );
+    await expect(nft.createNFT(wallet.address, '0', token.address, unlockDate)).to.be.revertedWith('NFT01');
   });
 
   it('reverts if the token == zero address', async () => {
     const fixture = await newNFTFixture(provider, [wallet], isCelo);
     const nft = fixture.nft;
 
-    await expect(nft.createNFT(wallet.address, amount, Constants.ZERO_ADDRESS, unlockDate)).to.be.revertedWith(
-      'HEC01: NFT Minting Error'
-    );
+    await expect(nft.createNFT(wallet.address, amount, Constants.ZERO_ADDRESS, unlockDate)).to.be.revertedWith('NFT01');
   });
 
   it('reverts if the unlockDate is less than now', async () => {
@@ -64,9 +60,7 @@ export default (isCelo: boolean = false) => {
     const token = fixture.token;
     const nft = fixture.nft;
 
-    await expect(nft.createNFT(wallet.address, amount, token.address, '0')).to.be.revertedWith(
-      'HEC01: NFT Minting Error'
-    );
+    await expect(nft.createNFT(wallet.address, amount, token.address, '0')).to.be.revertedWith('NFT01');
   });
 
   it('reverts if my wallet has insufficient balance', async () => {
@@ -75,7 +69,7 @@ export default (isCelo: boolean = false) => {
     const nft = fixture.nft;
 
     await expect(nft.createNFT(wallet.address, Constants.E18_1000, token.address, unlockDate)).to.be.revertedWith(
-      'LIB02: Insufficient Balance'
+      'THL01'
     );
   });
 
@@ -84,6 +78,6 @@ export default (isCelo: boolean = false) => {
     const nft = fixture.nft;
     const burn = fixture.burn;
 
-    expect(nft.createNFT(wallet.address, amount, burn.address, unlockDate)).to.be.revertedWith('LIB03: Token Imbalance');
+    expect(nft.createNFT(wallet.address, amount, burn.address, unlockDate)).to.be.revertedWith('THL02');
   });
 };

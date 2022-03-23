@@ -20,7 +20,7 @@ interface OTCCloseErrorParameters {
   purchaseAmount: string;
   expectedError: string;
   label: string;
-  isCelo: boolean,
+  isCelo: boolean;
   waitForBuyerPurchase?: boolean;
   waitForDealClose?: boolean;
 }
@@ -73,7 +73,7 @@ export default (isCelo: boolean = false) => {
       unlockDate: Constants.IN_ONE_HOUR,
       whitelist: Constants.ZERO_ADDRESS,
       purchaseAmount: Constants.E18_1,
-      expectedError: 'HEC04: Only Seller Can Close',
+      expectedError: 'OTC04',
       label: 'reverts if msg.sender is not the seller',
     },
     {
@@ -89,24 +89,8 @@ export default (isCelo: boolean = false) => {
       unlockDate: Constants.IN_ONE_HOUR,
       whitelist: Constants.ZERO_ADDRESS,
       purchaseAmount: Constants.E18_1,
-      expectedError: 'HEC04: Only Seller Can Close',
+      expectedError: 'OTC04',
       label: 'reverts if all tokens in the deal have been sold',
-    },
-    {
-      provider,
-      buyer,
-      waitForDealClose: true,
-      seller,
-      isCelo,
-      amount: Constants.E18_1,
-      min: Constants.E18_1,
-      price: Constants.E18_1,
-      maturity: Constants.IN_ONE_HOUR,
-      unlockDate: Constants.IN_ONE_HOUR,
-      whitelist: Constants.ZERO_ADDRESS,
-      purchaseAmount: Constants.E18_1,
-      expectedError: 'HEC04: Only Seller Can Close',
-      label: 'reverts if deal has been closed',
     },
   ];
 
