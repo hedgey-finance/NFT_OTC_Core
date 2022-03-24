@@ -43,7 +43,6 @@ export default (params: TestParameters) => {
         _price,
         _maturity,
         _unlockDate,
-        true,
         _buyer
       );
 
@@ -57,8 +56,7 @@ export default (params: TestParameters) => {
     expect(deal[5]).to.eq(_price);
     expect(deal[6]).to.eq(_maturity);
     expect(deal[7]).to.eq(_unlockDate);
-    expect(deal[8]).to.eq(true);
-    expect(deal[9]).to.eq(_buyer);
+    expect(deal[8]).to.eq(_buyer);
 
     const postTokenBalance = await token.balanceOf(otc.address);
     const postPaymentBalance = await paymentToken.balanceOf(otc.address);

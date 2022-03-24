@@ -72,7 +72,7 @@ export default (isCelo: boolean = false) => {
       unlockDate: Constants.IN_ONE_HOUR,
       whitelist: Constants.ZERO_ADDRESS,
       purchaseAmount: Constants.E18_1,
-      expectedError: 'HEC01: Maturity before block timestamp',
+      expectedError: 'OTC01',
       label: 'reverts if maturity date is less than the current block timestamp',
     },
     {
@@ -87,7 +87,7 @@ export default (isCelo: boolean = false) => {
       unlockDate: Constants.IN_ONE_HOUR,
       whitelist: Constants.ZERO_ADDRESS,
       purchaseAmount: Constants.E18_1,
-      expectedError: 'HEC02: Amount less than minium',
+      expectedError: 'OTC02',
       label: 'reverts if amount is less than minimum',
     },
     {
@@ -102,7 +102,7 @@ export default (isCelo: boolean = false) => {
       unlockDate: Constants.IN_ONE_HOUR,
       whitelist: Constants.ZERO_ADDRESS,
       purchaseAmount: Constants.E18_1,
-      expectedError: 'HEC03: Minimum smaller than 0',
+      expectedError: 'OTC03',
       label: 'reverts if price is zero',
     },
     {
@@ -117,7 +117,7 @@ export default (isCelo: boolean = false) => {
       unlockDate: Constants.IN_ONE_HOUR,
       whitelist: Constants.ZERO_ADDRESS,
       purchaseAmount: Constants.E18_1,
-      expectedError: 'HEC03: Minimum smaller than 0',
+      expectedError: 'OTC03',
       label: 'reverts if minimum is zero',
     },
     {
@@ -132,7 +132,7 @@ export default (isCelo: boolean = false) => {
       unlockDate: Constants.IN_ONE_HOUR,
       whitelist: Constants.ZERO_ADDRESS,
       purchaseAmount: Constants.E18_1,
-      expectedError: 'HEC03: Minimum smaller than 0',
+      expectedError: 'OTC03',
       label: 'reverts if minimum is 1 wei and price is 1 gwei',
     },
     {
@@ -149,7 +149,7 @@ export default (isCelo: boolean = false) => {
       unlockDate: Constants.IN_ONE_HOUR,
       whitelist: Constants.ZERO_ADDRESS,
       purchaseAmount: Constants.E18_1,
-      expectedError: 'HECA: Incorrect Transfer Value',
+      expectedError: 'THL03',
       label: "reverts if seller's token is weth and there's a small amount of eth in msg.value",
       txValue: {
         value: utils.parseEther('0.001'),
@@ -169,7 +169,7 @@ export default (isCelo: boolean = false) => {
       unlockDate: Constants.IN_ONE_HOUR,
       whitelist: Constants.ZERO_ADDRESS,
       purchaseAmount: Constants.E18_1,
-      expectedError: 'HECA: Incorrect Transfer Value',
+      expectedError: 'THL03',
       label: "reverts if seller's token is weth and there's a large amount of eth in msg.value",
       txValue: {
         value: utils.parseEther('500'),
@@ -188,7 +188,7 @@ export default (isCelo: boolean = false) => {
       unlockDate: Constants.IN_ONE_HOUR,
       whitelist: Constants.ZERO_ADDRESS,
       purchaseAmount: Constants.E18_1,
-      expectedError: 'HECB: Insufficient Balance',
+      expectedError: 'THL01',
       label: "reverts if seller's token is ERC20 but wallet has insufficient balance",
     },
     {
@@ -204,6 +204,7 @@ export default (isCelo: boolean = false) => {
       unlockDate: Constants.IN_ONE_HOUR,
       whitelist: Constants.ZERO_ADDRESS,
       purchaseAmount: Constants.E18_1,
+      expectedError: 'THL02',
       label: "reverts if seller's token is a tax or deflationary token",
     },
     {
