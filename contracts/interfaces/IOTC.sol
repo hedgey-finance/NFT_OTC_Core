@@ -18,7 +18,6 @@ interface IOTC {
       uint256 price,
       uint256 maturity,
       uint256 unlockDate,
-      bool open,
       address buyer
     );
 
@@ -71,7 +70,6 @@ interface IOTC {
     uint256 _price,
     uint256 _maturity,
     uint256 _unlockDate,
-    bool open,
     address _buyer
   );
   /// @notice event that is triggered when a buyer purchases some amount of tokens from a deal
@@ -79,5 +77,5 @@ interface IOTC {
   /// @notice event that is triggered when a deal is closed and can no longer be purhcased from
   event DealClosed(uint256 _d);
   /// @notice event triggered when a buyer purchased locked tokens which triggers the NFT mint and future creation on the NFT contract
-  event FutureCreated(address _owner, address _token, uint256 _unlockDate, uint256 _amount);
+  event FutureCreated(address _owner, address _token, uint256 _amount, uint256 _unlockDate);
 }
