@@ -5,10 +5,11 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '../interfaces/IWETH.sol';
 
+/// @notice Library to help safely transfer tokens and handle ETH wrapping and unwrapping of WETH
 library TransferHelper {
   using SafeERC20 for IERC20;
 
-  /// @notice This function used for standard ERC20 transfers
+  /// @notice Internal function used for standard ERC20 transferFrom method
   /// @notice it contains a pre and post balance check
   /// @notice as well as a check on the msg.senders balance
   /// @param token is the address of the ERC20 being transferred
@@ -27,6 +28,11 @@ library TransferHelper {
     require(postBalance - priorBalance == amount, 'THL02');
   }
 
+  /// @notice Internal function is used with standard ERC20 transfer method
+  /// @notice this function ensures that the amount received is the amount sent with pre and post balance checking
+  /// @param token is the ERC20 contract address that is being transferred
+  /// @param to is the address of the recipient
+  /// @param amount is the amount of tokens that are being transferred
   function withdrawTokens(
     address token,
     address to,
@@ -38,7 +44,7 @@ library TransferHelper {
     require(postBalance - priorBalance == amount, 'THL02');
   }
 
-  /// @dev internal function that handles transfering payments from buyers to sellers with special WETH handling
+  /// @dev Internal function that handles transfering payments from buyers to sellers with special WETH handling
   /// @dev this function assumes that if the recipient address is a contract, it cannot handle ETH - so we always deliver WETH
   /// @dev special care needs to be taken when using contract addresses to sell deals - to ensure it can handle WETH properly when received
   function transferPayment(
@@ -54,7 +60,7 @@ library TransferHelper {
         (bool success, ) = to.call{value: amount}('');
         require(success, 'THL04');
       } else {
-        // we want to deliver WETH from ETH here for better handling at contract
+        /// @dev we want to deliver WETH from ETH here for better handling at contract
         IWETH(weth).deposit{value: amount}();
         assert(IWETH(weth).transfer(to, amount));
       }
@@ -63,7 +69,7 @@ library TransferHelper {
     }
   }
 
-  /// @dev internal funciton that handles withdrawing tokens that are up for sale to buyers
+  /// @dev Internal funciton that handles withdrawing tokens and WETH that are up for sale to buyers
   /// @dev this function is only called if the tokens are not timelocked
   /// @dev this function handles weth specially and delivers ETH to the recipient
   function withdrawPayment(

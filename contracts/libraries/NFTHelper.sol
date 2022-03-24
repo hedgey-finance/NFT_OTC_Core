@@ -4,10 +4,13 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '../interfaces/INFT.sol';
 
+/// @notice Library to lock tokens and mint an NFT
+/// @notice this NFTHelper is used by the HedgeyOTC contract to lock tokens and instruct the Hedgeys contract to mint an NFT
 library NFTHelper {
   /// @dev internal function that handles the locking of the tokens in the NFT Futures contract
-  /// @param _holder address here becomes the owner of the NFT
-  /// @param _token address here is the asset that is locked in the NFT Future
+  /// @param futureContract is the address of the NFT contract that will mint the NFT and lock tokens
+  /// @param _holder address here becomes the owner of the newly minted NFT
+  /// @param _token address here is the ERC20 contract address of the tokens being locked by the NFT contract
   /// @param _amount is the amount of tokens that will be locked
   /// @param _unlockDate provides the unlock date which is the expiration date for the Future generated
   function lockTokens(
@@ -17,6 +20,7 @@ library NFTHelper {
     uint256 _amount,
     uint256 _unlockDate
   ) internal {
+    /// @dev ensure that the _unlockDate is in the future compared to the current block timestamp
     require(_unlockDate > block.timestamp, 'NHL01');
     /// @dev similar to checking the balances for the OTC contract when creating a new deal - we check the current and post balance in the NFT contract
     /// @dev to ensure that 100% of the amount of tokens to be locked are in fact locked in the contract address
