@@ -51,15 +51,11 @@ export default (isWeth: boolean, isCelo: boolean) => {
   });
 
   it('reverts if the wallet sending is not the owner', async () => {
-    //const fixture = await fixtures.createdNFTFixture(provider, [wallet], isWeth, wallet, amount, unlockDate);
-    //nft = fixture.nft;
     await new Promise((resolve) => setTimeout(resolve, 6000));
-    await expect(nft.connect(other).redeemNFT('1')).to.be.revertedWith('HNEC04: Only the NFT Owner');
+    await expect(nft.connect(other).redeemNFT('1')).to.be.revertedWith('NFT03');
   });
 
   it('reverts if the tokens are not unlocked yet', async () => {
-    const fixture = await createdNFTFixture(provider, [wallet], isWeth, wallet, amount, unlockDate, isCelo);
-    nft = fixture.nft;
-    await expect(nft.redeemNFT('1')).to.be.revertedWith('HNEC05: Tokens are still locked');
+    await expect(nft.redeemNFT('1')).to.be.revertedWith('NFT04');
   });
 };
