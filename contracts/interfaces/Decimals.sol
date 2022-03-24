@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.13;
 
 /// @dev this interface is a critical addition that is not part of the standard ERC-20 specifications

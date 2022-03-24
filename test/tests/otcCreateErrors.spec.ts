@@ -1,10 +1,10 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { expect } from 'chai';
 import { MockProvider } from 'ethereum-waffle';
-import { BigNumber, utils, Wallet } from 'ethers';
-
+import { BigNumber, Contract, ContractFactory, utils, Wallet } from 'ethers';
 import * as Constants from '../constants';
-import { otcFixture } from '../fixtures';
+import { deployWeth } from '@thenextblock/hardhat-weth';
+import { ethers } from 'hardhat';
 import { IIndexable } from '../helpers';
 
 interface OTCCreateErrorParameters {
@@ -32,13 +32,46 @@ interface OTCCreateErrorParameters {
 const errorTest = async (params: OTCCreateErrorParameters) => {
   if (params.isCelo && params.skipIfCelo) return;
 
-  it(params.label, async () => {
-    const fixture = await otcFixture(params.provider, [params.seller], params.emptyWallet, params.isCelo);
+  let otc: Contract, dummyTokens: IIndexable;
 
-    const assetToken = params.asset ? (fixture as IIndexable)[params.asset] : fixture.tokenA;
-    const fCreate = fixture.otc.create(
-      assetToken.address,
-      fixture.tokenB.address,
+  before(async() => {
+    const baseUrl = 'http://nft.hedgey.finance';
+    const wallets = await ethers.getSigners();
+    const [owner] = wallets;
+    const weth = await deployWeth(owner);
+    await weth.deployed();
+    
+    const nftFactory = await ethers.getContractFactory(params.isCelo ? 'CeloHedgeys' : 'Hedgeys');
+    const nft = params.isCelo ? await nftFactory.deploy(baseUrl) : await nftFactory.deploy(weth.address, baseUrl);
+    await nft.deployed();
+
+    const otcFactory = await ethers.getContractFactory(params.isCelo ? 'CeloHedgeyOTC' : 'HedgeyOTC');
+    otc = params.isCelo ? await otcFactory.deploy(nft.address) : await otcFactory.deploy(weth.address, nft.address);
+    await otc.deployed();
+
+    const Token = await ethers.getContractFactory('Token');
+    const tokenA = await Token.deploy(params.emptyWallet ? Constants.ZERO : Constants.E18_100, 18);
+    await tokenA.deployed();
+    await tokenA.approve(otc.address, Constants.E18_100);
+    const tokenB = await Token.deploy(Constants.E18_1000, 18);
+    await tokenB.deployed();
+    await tokenB.approve(otc.address, Constants.E18_100);
+    const BurnToken = await ethers.getContractFactory('BurnToken');
+    const burn = await BurnToken.deploy('BURN', 'BURN');
+    await burn.deployed();
+    await burn.mint(Constants.E18_100);
+    const FakeToken = await ethers.getContractFactory('FakeToken');
+    const fake = await FakeToken.deploy('FAKE', 'FAKE');
+    await fake.deployed();
+    dummyTokens = { tokenA, tokenB, weth, burn, fake };
+  });
+
+  it(params.label, async () => {
+    // @ts-ignore
+    const token = params.asset ? dummyTokens[params.asset] : dummyTokens.tokenA;
+    const fCreate = otc.create(
+      token.address,
+      dummyTokens.tokenB.address,
       params.amount,
       params.min,
       params.price,
