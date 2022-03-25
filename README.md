@@ -7,7 +7,7 @@ The Hedgeys (NFT) contract also enables users to build ontop of the protocol, an
 For more information and documentation on the OTC product and functionality, please visit the [Hedgey OTC Docs](https://global-alfalfa-07c.notion.site/Hedgey-OTC-deals-cbc7b0047d7343e3ba2e236741e9c9bd)  
 For more information and documentation specifically on the NFTs, please visit the [Hedgeys NFT Docs](https://global-alfalfa-07c.notion.site/Hedgeys-NFT-b03348c0f84a46acbe0d8861c7490c05)  
 
-For developer documentation, integrations and APIs -  [developers](https://global-alfalfa-07c.notion.site/OTC-Protocol-95b18254e5c543498b2d7b01790f1f86)  
+For developer documentation, integrations and APIs -  [OTC developers](https://global-alfalfa-07c.notion.site/OTC-Protocol-95b18254e5c543498b2d7b01790f1f86)  and [NFT Developers](https://global-alfalfa-07c.notion.site/Hedgeys-NFT-2fc03fc8bdc54cb0ae6673d33b5e2f8b)  
 For a list of [Error Codes](https://global-alfalfa-07c.notion.site/Error-Codes-e15907bfd8804105ba7b5a373df63c18)  
 
 
