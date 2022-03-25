@@ -123,10 +123,10 @@ contract CeloHedgeys is ERC721Enumerable, ReentrancyGuard {
     emit NFTRedeemed(_id, _holder, future.amount, future.token, future.unlockDate);
     /// @dev burn the NFT
     _burn(_id);
-    /// @dev physically deliver the tokens to the NFT owner
-    TransferHelper.withdrawTokens(future.token, _holder, future.amount);
     /// @dev delete the futures struct so that the owner cannot call this function again
     delete futures[_id];
+        /// @dev physically deliver the tokens to the NFT owner
+    TransferHelper.withdrawTokens(future.token, _holder, future.amount);
   }
 
   ///@notice Events when a new NFT (future) is created and one with a Future is redeemed (burned)
