@@ -45,7 +45,7 @@ contract Hedgeys is ERC721Enumerable, ReentrancyGuard {
 
   /**
    * @notice The external function creates a Future position
-   * @notice This funciton does not accept ETH, must send in WETH to lock ETH
+   * @notice This function does not accept ETH, must send in WETH to lock ETH
    * @notice A Future position is the combination of an NFT and a Future struct with the same _tokenID storing both information separately but with the same index
    * @notice Anyone can mint an NFT & create a futures Struct, so long as they have sufficient tokens to lock up
    * @notice A user can mint the NFT to themselves, passing in their address to the first parameter, or they can directly mint an NFT to someone else
@@ -129,10 +129,10 @@ contract Hedgeys is ERC721Enumerable, ReentrancyGuard {
     emit NFTRedeemed(_id, _holder, future.amount, future.token, future.unlockDate);
     /// @dev burn the NFT 
     _burn(_id);
-    /// @dev physically deliver the tokens to the NFT owner
-    TransferHelper.withdrawPayment(weth, future.token, _holder, future.amount);
     /// @dev delete the futures struct so that the owner cannot call this function again
     delete futures[_id];
+    /// @dev physically deliver the tokens to the NFT owner
+    TransferHelper.withdrawPayment(weth, future.token, _holder, future.amount);
   }
 
   ///@notice Events when a new NFT (future) is created and one with a Future is redeemed (burned)
