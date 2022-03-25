@@ -34,13 +34,13 @@ const errorTest = async (params: OTCCreateErrorParameters) => {
 
   let otc: Contract, dummyTokens: IIndexable;
 
-  before(async() => {
+  before(async () => {
     const baseUrl = 'http://nft.hedgey.finance';
     const wallets = await ethers.getSigners();
     const [owner] = wallets;
     const weth = await deployWeth(owner);
     await weth.deployed();
-    
+
     const nftFactory = await ethers.getContractFactory(params.isCelo ? 'CeloHedgeys' : 'Hedgeys');
     const nft = params.isCelo ? await nftFactory.deploy(baseUrl) : await nftFactory.deploy(weth.address, baseUrl);
     await nft.deployed();
@@ -60,6 +60,7 @@ const errorTest = async (params: OTCCreateErrorParameters) => {
     const burn = await BurnToken.deploy('BURN', 'BURN');
     await burn.deployed();
     await burn.mint(Constants.E18_100);
+    await burn.approve(otc.address, Constants.E18_100);
     const FakeToken = await ethers.getContractFactory('FakeToken');
     const fake = await FakeToken.deploy('FAKE', 'FAKE');
     await fake.deployed();
