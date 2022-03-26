@@ -60,6 +60,7 @@ const errorTest = async (params: OTCCreateErrorParameters) => {
     const burn = await BurnToken.deploy('BURN', 'BURN');
     await burn.deployed();
     await burn.mint(Constants.E18_100);
+    await burn.approve(OTC.address, Constants.E18_100);
     const FakeToken = await ethers.getContractFactory('FakeToken');
     const fake = await FakeToken.deploy('FAKE', 'FAKE');
     await fake.deployed();
