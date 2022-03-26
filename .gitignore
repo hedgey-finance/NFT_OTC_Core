@@ -108,3 +108,6 @@ artifacts/
 
 # Cache folder
 cache/
+
+# Coverage file
+coverage.json
