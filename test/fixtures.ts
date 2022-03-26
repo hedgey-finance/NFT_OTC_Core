@@ -139,12 +139,12 @@ export async function generateOTCFixture({
   const Token = await ethers.getContractFactory('Token');
   const BurnToken = await ethers.getContractFactory('BurnToken');
   const FakeToken = await ethers.getContractFactory('FakeToken');
-  const Otc = await ethers.getContractFactory(isCelo ? 'CeloHedgeyOTC' : 'HedgeyOTC');
-  const Nft = await ethers.getContractFactory(isCelo ? 'CeloHedgeys' : 'Hedgeys');
+  const OTC = await ethers.getContractFactory(isCelo ? 'CeloHedgeyOTC' : 'HedgeyOTC');
+  const NFT = await ethers.getContractFactory(isCelo ? 'CeloHedgeys' : 'Hedgeys');
 
   // deploy the required contracts
-  const nft = isCelo ? await Nft.deploy(baseUrl) : await Nft.deploy(weth.address, baseUrl);
-  const otc = isCelo ? await Otc.deploy(nft.address) : await Otc.deploy(await nft.weth(), nft.address);
+  const nft = isCelo ? await NFT.deploy(baseUrl) : await NFT.deploy(weth.address, baseUrl);
+  const otc = isCelo ? await OTC.deploy(nft.address) : await OTC.deploy(await nft.weth(), nft.address);
   const tokenA = await Token.deploy(tokenASupply, 18);
   const tokenB = await Token.deploy(tokenBSupply, 18);
   const burn = await BurnToken.deploy('BURN', 'BURN');
@@ -230,11 +230,11 @@ export async function generateDealFixture({
   const [owner, buyer, other] = await ethers.getSigners();
   const weth = await deployWeth(owner);
   const Token = await ethers.getContractFactory('Token');
-  const Otc = await ethers.getContractFactory(isCelo ? 'CeloHedgeyOTC' : 'HedgeyOTC');
-  const Nft = await ethers.getContractFactory(isCelo ? 'CeloHedgeys' : 'Hedgeys');
+  const OTC = await ethers.getContractFactory(isCelo ? 'CeloHedgeyOTC' : 'HedgeyOTC');
+  const NFT = await ethers.getContractFactory(isCelo ? 'CeloHedgeys' : 'Hedgeys');
 
-  const nft = isCelo ? await Nft.deploy(baseUrl) : await Nft.deploy(weth.address, baseUrl);
-  const otc = isCelo ? await Otc.deploy(nft.address) : await Otc.deploy(await nft.weth(), nft.address);
+  const nft = isCelo ? await NFT.deploy(baseUrl) : await NFT.deploy(weth.address, baseUrl);
+  const otc = isCelo ? await OTC.deploy(nft.address) : await OTC.deploy(await nft.weth(), nft.address);
 
   const tokenA = await Token.deploy(Constants.E18_1000, 18);
   await tokenA.approve(otc.address, Constants.E18_100);
