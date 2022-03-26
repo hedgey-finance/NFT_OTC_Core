@@ -8,7 +8,7 @@ import { inFiveSeconds } from '../helpers';
 import * as Constants from '../constants';
 import { createdNFTFixture } from '../fixtures';
 
-export default (isWeth: boolean, isCelo: boolean) => {
+export default (isWeth: boolean = false, isCelo: boolean = false) => {
   const provider = new MockProvider();
   const [wallet, other] = provider.getWallets();
 
@@ -35,11 +35,13 @@ export default (isWeth: boolean, isCelo: boolean) => {
   it('redeem future', async () => {
     //gotta wait 6 seconds for it to be redeemable;
     await new Promise((resolve) => setTimeout(resolve, 6000));
+
     await expect(nft.redeemNFT('1'))
       .to.emit(nft, 'NFTRedeemed')
       .withArgs('1', wallet.address, amount, asset.address, unlockDate)
       .to.emit(nft, 'Transfer')
       .withArgs(wallet.address, Constants.ZERO_ADDRESS, '1');
+
     const future = await nft.futures('1');
 
     expect(future[0]).to.eq('0');
