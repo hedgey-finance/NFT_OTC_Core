@@ -3,28 +3,35 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { Contract, ContractFactory } from 'ethers';
 
-export default () => {
-  let Otc: ContractFactory;
+import { nftBaseUrl } from '../constants';
+
+export default (isCelo: boolean = false) => {
+  let OTC: ContractFactory;
   let otc: Contract;
   let weth: WETH9;
-  let Nft: ContractFactory;
+  let NFT: ContractFactory;
   let nft: Contract;
-
-  
 
   before(async () => {
     const [owner] = await ethers.getSigners();
     weth = await deployWeth(owner);
-    Otc = await ethers.getContractFactory('HedgeyOTC');
-    Nft = await ethers.getContractFactory('Hedgeys');
-    nft = await Nft.deploy(weth.address, 'http://nft.hedgey.finance');
-    otc = await Otc.deploy(await nft.weth(), nft.address);
+    OTC = await ethers.getContractFactory(isCelo ? 'CeloHedgeyOTC' : 'HedgeyOTC');
+    NFT = await ethers.getContractFactory(isCelo ? 'CeloHedgeys' : 'Hedgeys');
+
+    nft = isCelo ? await NFT.deploy(nftBaseUrl) : await NFT.deploy(weth.address, nftBaseUrl);
+    otc = isCelo ? await OTC.deploy(nft.address) : await OTC.deploy(await nft.weth(), nft.address);
   });
 
-  it('should have weth set', async () => {
-    const otcWeth = await otc.weth();
-    expect(otcWeth).equal(weth.address);
-  });
+  if (isCelo) {
+    it('should have not have weth method', async () => {
+      expect(otc.weth).equal(undefined);
+    });
+  } else {
+    it('should have weth set', async () => {
+      const otcWeth = await otc.weth();
+      expect(otcWeth).equal(weth.address);
+    });
+  }
 
   it('should have base URI set', async () => {
     const futuresContract = await otc.futureContract();

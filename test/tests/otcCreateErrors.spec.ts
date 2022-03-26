@@ -1,16 +1,10 @@
-import { Web3Provider } from '@ethersproject/providers';
+import { DummyTokens } from './../fixtures';
 import { expect } from 'chai';
-import { MockProvider } from 'ethereum-waffle';
-import { BigNumber, Contract, ContractFactory, utils, Wallet } from 'ethers';
+import { BigNumber, utils } from 'ethers';
 import * as Constants from '../constants';
-import { deployWeth } from '@thenextblock/hardhat-weth';
-import { ethers } from 'hardhat';
-import { IIndexable } from '../helpers';
+import { generateOTCFixture } from '../fixtures';
 
 interface OTCCreateErrorParameters {
-  provider: Web3Provider;
-  seller: Wallet;
-  buyer: Wallet;
   amount: string;
   min: string;
   price: string;
@@ -32,48 +26,16 @@ interface OTCCreateErrorParameters {
 const errorTest = async (params: OTCCreateErrorParameters) => {
   if (params.isCelo && params.skipIfCelo) return;
 
-  let otc: Contract, dummyTokens: IIndexable;
-
-  before(async() => {
-    const baseUrl = 'http://nft.hedgey.finance';
-    const wallets = await ethers.getSigners();
-    const [owner] = wallets;
-    const weth = await deployWeth(owner);
-    await weth.deployed();
-    
-    const nftFactory = await ethers.getContractFactory(params.isCelo ? 'CeloHedgeys' : 'Hedgeys');
-    const nft = params.isCelo ? await nftFactory.deploy(baseUrl) : await nftFactory.deploy(weth.address, baseUrl);
-    await nft.deployed();
-
-    const otcFactory = await ethers.getContractFactory(params.isCelo ? 'CeloHedgeyOTC' : 'HedgeyOTC');
-    otc = params.isCelo ? await otcFactory.deploy(nft.address) : await otcFactory.deploy(weth.address, nft.address);
-    await otc.deployed();
-
-    const Token = await ethers.getContractFactory('Token');
-    const tokenA = await Token.deploy(params.emptyWallet ? Constants.ZERO : Constants.E18_100, 18);
-    await tokenA.deployed();
-    await tokenA.approve(otc.address, Constants.E18_100);
-    const tokenB = await Token.deploy(Constants.E18_1000, 18);
-    await tokenB.deployed();
-    await tokenB.approve(otc.address, Constants.E18_100);
-    const BurnToken = await ethers.getContractFactory('BurnToken');
-    const burn = await BurnToken.deploy('BURN', 'BURN');
-    await burn.deployed();
-    await burn.mint(Constants.E18_100);
-    await burn.approve(otc.address, Constants.E18_100);
-    const FakeToken = await ethers.getContractFactory('FakeToken');
-    const fake = await FakeToken.deploy('FAKE', 'FAKE');
-    await fake.deployed();
-    dummyTokens = { tokenA, tokenB, weth, burn, fake };
-  });
-
   it(params.label, async () => {
-    // @ts-ignore
-    const token = params.asset ? dummyTokens[params.asset] : dummyTokens.tokenA;
+    const { otc, dummyTokens } = await generateOTCFixture({
+      isCelo: params.isCelo,
+      tokenASupply: params.emptyWallet ? Constants.ZERO : Constants.E18_100,
+    });
+    const token = params.asset ? dummyTokens[params.asset as keyof DummyTokens] : dummyTokens.tokenA;
     const fCreate = otc.create(
       token.address,
       dummyTokens.tokenB.address,
-      params.amount, to
+      params.amount,
       params.min,
       params.price,
       params.maturity,
@@ -90,14 +52,8 @@ const errorTest = async (params: OTCCreateErrorParameters) => {
 };
 
 export default (isCelo: boolean = false) => {
-  const provider = new MockProvider();
-  const [buyer, seller] = provider.getWallets();
-
   const params = [
     {
-      provider,
-      buyer,
-      seller,
       isCelo,
       amount: Constants.E18_10,
       min: Constants.E18_1,
@@ -110,9 +66,6 @@ export default (isCelo: boolean = false) => {
       label: 'reverts if maturity date is less than the current block timestamp',
     },
     {
-      provider,
-      buyer,
-      seller,
       isCelo,
       amount: Constants.ONE,
       min: Constants.E18_1,
@@ -125,9 +78,6 @@ export default (isCelo: boolean = false) => {
       label: 'reverts if amount is less than minimum',
     },
     {
-      provider,
-      buyer,
-      seller,
       isCelo,
       amount: Constants.E18_10,
       min: Constants.E18_1,
@@ -140,9 +90,6 @@ export default (isCelo: boolean = false) => {
       label: 'reverts if price is zero',
     },
     {
-      provider,
-      buyer,
-      seller,
       isCelo,
       amount: Constants.E18_10,
       min: Constants.ZERO,
@@ -155,9 +102,6 @@ export default (isCelo: boolean = false) => {
       label: 'reverts if minimum is zero',
     },
     {
-      provider,
-      buyer,
-      seller,
       isCelo,
       amount: Constants.E18_10,
       min: Constants.ONE,
@@ -170,9 +114,6 @@ export default (isCelo: boolean = false) => {
       label: 'reverts if minimum is 1 wei and price is 1 gwei',
     },
     {
-      provider,
-      buyer,
-      seller,
       isCelo,
       skipIfCelo: true,
       asset: Constants.Tokens.Weth,
@@ -190,9 +131,6 @@ export default (isCelo: boolean = false) => {
       },
     },
     {
-      provider,
-      buyer,
-      seller,
       isCelo,
       skipIfCelo: true,
       asset: Constants.Tokens.Weth,
@@ -210,9 +148,6 @@ export default (isCelo: boolean = false) => {
       },
     },
     {
-      provider,
-      buyer,
-      seller,
       isCelo,
       emptyWallet: true,
       amount: Constants.E18_10,
@@ -226,9 +161,6 @@ export default (isCelo: boolean = false) => {
       label: "reverts if seller's token is ERC20 but wallet has insufficient balance",
     },
     {
-      provider,
-      buyer,
-      seller,
       isCelo,
       asset: Constants.Tokens.Burn,
       amount: Constants.E18_10,
@@ -242,9 +174,6 @@ export default (isCelo: boolean = false) => {
       label: "reverts if seller's token is a tax or deflationary token",
     },
     {
-      provider,
-      buyer,
-      seller,
       isCelo,
       asset: Constants.Tokens.Fake,
       amount: Constants.E18_10,

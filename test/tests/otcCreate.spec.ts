@@ -1,44 +1,15 @@
+import { DummyTokens } from './../fixtures';
 import { expect } from 'chai';
 import { TestParameters, generateLabel, IIndexable } from '../helpers';
 import * as Constants from '../constants';
-import { ethers } from 'hardhat';
-import { Contract, ContractFactory } from 'ethers';
-import { WETH9, deployWeth } from '@thenextblock/hardhat-weth';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { generateOTCFixture } from '../fixtures';
 
 export default (params: TestParameters) => {
-  let wallets: SignerWithAddress[];
-  let weth: WETH9;
-  let Token: ContractFactory;
-  let Otc: ContractFactory;
-  let otc: Contract;
-  let Nft: ContractFactory;
-  let nft: Contract;
-  let dummyTokens: IIndexable;
-
   it(generateLabel(params), async () => {
-    const baseUrl = 'http://nft.hedgey.finance';
-    wallets = await ethers.getSigners();
-    const [owner] = wallets;
-    weth = await deployWeth(owner);
-    Token = await ethers.getContractFactory('Token');
-    Otc = await ethers.getContractFactory(params.isCelo ? 'CeloHedgeyOTC' : 'HedgeyOTC');
-    Nft = await ethers.getContractFactory(params.isCelo ? 'CeloHedgeys' : 'Hedgeys');
-    if (params.isCelo) {
-      nft = await Nft.deploy(baseUrl);
-      otc = await Otc.deploy(nft.address);
-    } else {
-      nft = await Nft.deploy(weth.address, baseUrl);
-      otc = await Otc.deploy(await nft.weth(), nft.address);
-    }
-    const tokenA = await Token.deploy(Constants.E18_1000, 18);
-    await tokenA.approve(otc.address, Constants.E18_100);
-    const tokenB = await Token.deploy(Constants.E18_1000, 18);
-    await tokenB.approve(otc.address, Constants.E18_100);
-    dummyTokens = { tokenA: tokenA, tokenB: tokenB, weth: weth };
+    const { owner, otc, dummyTokens } = await generateOTCFixture({ isCelo: params.isCelo });
 
-    const token = dummyTokens[params.asset];
-    const paymentToken = dummyTokens[params.payment];
+    const token = dummyTokens[params.asset as keyof DummyTokens];
+    const paymentToken = dummyTokens[params.payment as keyof DummyTokens];
     const assetAndPaymentMatch = token.address === paymentToken.address;
     const prePaymentBalance = await paymentToken.balanceOf(otc.address);
 

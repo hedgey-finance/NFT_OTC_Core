@@ -62,9 +62,9 @@ contract CeloHedgeys is ERC721Enumerable, ReentrancyGuard {
     require(_amount > 0 && _token != address(0) && _unlockDate > block.timestamp, 'NFT01');
     /// @dev using the same newItemID we generate a Future struct recording the token address (asset), the amount of tokens (amount), and time it can be unlocked (_unlockDate)
     futures[newItemId] = Future(_amount, _token, _unlockDate);
-    /// @dev pulls funds from the msg.sender into this contract for escrow to be locked until the unlockDate has passed 
+    /// @dev pulls funds from the msg.sender into this contract for escrow to be locked until the unlockDate has passed
     TransferHelper.transferTokens(_token, msg.sender, address(this), _amount);
-    /// @dev this safely mints an NFT to the _holder address at the current counter index newItemID. 
+    /// @dev this safely mints an NFT to the _holder address at the current counter index newItemID.
     /// @dev _safeMint ensures that the receiver address can receive and handle ERC721s - which is either a normal wallet, or a smart contract that has implemented ERC721 receiver
     _safeMint(_holder, newItemId);
     /// @dev emit an event with the details of the NFT id minted, plus the attributes of the locked tokens
@@ -112,7 +112,7 @@ contract CeloHedgeys is ERC721Enumerable, ReentrancyGuard {
    * @param _id is the unique id of the NFT and unique id of the Future struct
    */
   function _redeemNFT(address _holder, uint256 _id) internal {
-    /// @dev ensure that only the owner of the NFT can call this function 
+    /// @dev ensure that only the owner of the NFT can call this function
     require(ownerOf(_id) == _holder, 'NFT03');
     /// @dev pull the future data from storage and keep in memory to check requirements and disribute tokens
     Future memory future = futures[_id];
@@ -125,7 +125,7 @@ contract CeloHedgeys is ERC721Enumerable, ReentrancyGuard {
     _burn(_id);
     /// @dev delete the futures struct so that the owner cannot call this function again
     delete futures[_id];
-        /// @dev physically deliver the tokens to the NFT owner
+    /// @dev physically deliver the tokens to the NFT owner
     TransferHelper.withdrawTokens(future.token, _holder, future.amount);
   }
 
