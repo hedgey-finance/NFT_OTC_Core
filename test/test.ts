@@ -65,7 +65,7 @@ describe('Hedgey OTC Library', async () => {
   });
 
   describe('Celo OTC Contract', () => {
-    describe('Constructor', () => otcCreateErrorsTests(true));
+    describe('Constructor', () => otcConstructorTests(true));
     describe('Create Errors', () => otcCreateErrorsTests(true));
 
     describe('Creating', () => {
