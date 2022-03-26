@@ -1,3 +1,4 @@
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { deployContract } from 'ethereum-waffle';
 import { Web3Provider } from '@ethersproject/providers';
 import { Wallet, Contract } from 'ethers';
@@ -14,6 +15,7 @@ import FakeToken from '../artifacts/contracts/test/FakeToken.sol/FakeToken.json'
 
 import { IIndexable } from './helpers';
 import * as Constants from './constants';
+import { ethers } from 'hardhat';
 
 interface DealFixture {
   weth: WETH9;
@@ -102,6 +104,80 @@ export async function nftFixture(
   return nft;
 }
 
+interface OTCProps {
+  isCelo?: boolean;
+  tokenASupply?: string;
+  tokenBSupply?: string;
+}
+
+export interface DummyTokens {
+  tokenA: Contract;
+  tokenB: Contract;
+  weth: WETH9;
+  burn: Contract;
+  fake: Contract;
+}
+interface OTCReturn {
+  owner: SignerWithAddress;
+  buyer: SignerWithAddress;
+  seller: SignerWithAddress;
+  otc: Contract;
+  dummyTokens: DummyTokens;
+}
+
+export async function generateOTCFixture({
+  isCelo,
+  tokenASupply = Constants.E18_1000,
+  tokenBSupply = Constants.E18_1000,
+}: OTCProps): Promise<OTCReturn> {
+  const baseUrl = Constants.nftBaseUrl;
+  const wallets = await ethers.getSigners();
+  const [owner, buyer, seller] = wallets;
+  const weth = await deployWeth(owner);
+
+  // get our required contracts
+  const Token = await ethers.getContractFactory('Token');
+  const BurnToken = await ethers.getContractFactory('BurnToken');
+  const FakeToken = await ethers.getContractFactory('FakeToken');
+  const Otc = await ethers.getContractFactory(isCelo ? 'CeloHedgeyOTC' : 'HedgeyOTC');
+  const Nft = await ethers.getContractFactory(isCelo ? 'CeloHedgeys' : 'Hedgeys');
+
+  // deploy the required contracts
+  const nft = isCelo ? await Nft.deploy(baseUrl) : await Nft.deploy(weth.address, baseUrl);
+  const otc = isCelo ? await Otc.deploy(nft.address) : await Otc.deploy(await nft.weth(), nft.address);
+  const tokenA = await Token.deploy(tokenASupply, 18);
+  const tokenB = await Token.deploy(tokenBSupply, 18);
+  const burn = await BurnToken.deploy('BURN', 'BURN');
+  await burn.deployed();
+  await burn.mint(Constants.E18_100);
+  const fake = await FakeToken.deploy('FAKE', 'FAKE');
+
+  // approvals
+  await tokenA.approve(otc.address, Constants.E18_100);
+  await tokenB.approve(otc.address, Constants.E18_100);
+  await burn.approve(otc.address, Constants.E18_100);
+  await fake.approve(otc.address, Constants.E18_100);
+
+  const dummyTokens = { tokenA: tokenA, tokenB: tokenB, weth: weth, burn: burn, fake: fake };
+
+  await Promise.all([
+    nft.deployed(),
+    otc.deployed(),
+    tokenA.deployed(),
+    tokenB.deployed(),
+    burn.deployed(),
+    fake.deployed(),
+  ]);
+
+  return {
+    owner,
+    buyer,
+    seller,
+    otc,
+    dummyTokens,
+  };
+}
+
 export async function otcFixture(
   provider: Web3Provider,
   [wallet]: Wallet[],
@@ -126,6 +202,68 @@ export async function otcFixture(
   const fake = await fakeTokenFixture(provider, [wallet]);
 
   return { weth, nft, otc, tokenA, tokenB, burn, fake };
+}
+
+interface DealProps {
+  amount: string;
+  minimum: string;
+  price: string;
+  maturity: string;
+  unlockDate: string;
+  whitelist: string;
+  asset?: string;
+  payment?: string;
+  isCelo?: boolean;
+}
+export async function generateDealFixture({
+  amount,
+  minimum,
+  price,
+  maturity,
+  unlockDate,
+  whitelist,
+  asset = Constants.Tokens.TokenA,
+  payment = Constants.Tokens.TokenB,
+  isCelo = false,
+}: DealProps) {
+  const baseUrl = Constants.nftBaseUrl;
+  const [owner, buyer, other] = await ethers.getSigners();
+  const weth = await deployWeth(owner);
+  const Token = await ethers.getContractFactory('Token');
+  const Otc = await ethers.getContractFactory(isCelo ? 'CeloHedgeyOTC' : 'HedgeyOTC');
+  const Nft = await ethers.getContractFactory(isCelo ? 'CeloHedgeys' : 'Hedgeys');
+
+  const nft = isCelo ? await Nft.deploy(baseUrl) : await Nft.deploy(weth.address, baseUrl);
+  const otc = isCelo ? await Otc.deploy(nft.address) : await Otc.deploy(await nft.weth(), nft.address);
+
+  const tokenA = await Token.deploy(Constants.E18_1000, 18);
+  await tokenA.approve(otc.address, Constants.E18_100);
+  await tokenA.transfer(buyer.address, Constants.E18_50);
+  await tokenA.connect(buyer).approve(otc.address, Constants.E18_100);
+
+  const tokenB = await Token.deploy(Constants.E18_1000, 18);
+  await tokenB.approve(otc.address, Constants.E18_100);
+  await tokenB.transfer(buyer.address, Constants.E18_50);
+  await tokenB.connect(buyer).approve(otc.address, Constants.E18_100);
+
+  if ((asset === Constants.Tokens.Weth || payment === Constants.Tokens.Weth) && !isCelo) {
+    await weth.deposit({ value: Constants.E18_100 });
+    await weth.connect(buyer).deposit({ value: Constants.E18_100 });
+
+    await weth.approve(otc.address, Constants.E18_100);
+    await weth.connect(buyer).approve(otc.address, Constants.E18_100);
+  }
+
+  const returnValues = { weth, nft, tokenA, tokenB };
+
+  const assetAddress = (returnValues as IIndexable)[asset].address;
+  const paymentAddress = (returnValues as IIndexable)[payment].address;
+
+  //create a deal at index0
+  await otc.create(assetAddress, paymentAddress, amount, minimum, price, maturity, unlockDate, whitelist, {
+    value: asset === Constants.Tokens.Weth ? amount : 0,
+  });
+  return { ...returnValues, otc, owner, buyer, other };
 }
 
 export async function dealFixture(

@@ -4,12 +4,10 @@ import { MockProvider } from 'ethereum-waffle';
 import { Wallet } from 'ethers';
 
 import * as Constants from '../constants';
-import { dealFixture } from '../fixtures';
+import { dealFixture, generateDealFixture, generateOTCFixture } from '../fixtures';
 
 interface OTCBuyErrorParameters {
-  provider: Web3Provider;
-  seller: Wallet;
-  buyer: Wallet;
+  buyer?: string;
   amount: string;
   min: string;
   price: string;
@@ -25,36 +23,30 @@ interface OTCBuyErrorParameters {
 
 const errorTest = async (params: OTCBuyErrorParameters) => {
   it(params.label, async () => {
-    const fixture = await dealFixture(
-      params.provider,
-      [params.seller, params.buyer],
-      params.amount,
-      params.min,
-      params.price,
-      params.maturity,
-      params.unlockDate,
-      params.whitelist,
-      Constants.Tokens.TokenA,
-      Constants.Tokens.TokenB,
-      params.isCelo
-    );
-    if (params.closed) fixture.otc.close(0);
+    const { otc, owner, buyer } = await generateDealFixture({
+      amount: params.amount,
+      minimum: params.min,
+      price: params.price,
+      maturity: params.maturity,
+      unlockDate: params.unlockDate,
+      whitelist: params.whitelist,
+      asset: Constants.Tokens.TokenA,
+      payment: Constants.Tokens.TokenB,
+      isCelo: params.isCelo,
+    });
 
-    await expect(fixture.otc.connect(params.buyer).buy('0', params.purchaseAmount)).to.be.revertedWith(
-      params.expectedError
-    );
+    if (params.closed) otc.close(0);
+
+    const connectTo = params.buyer === 'owner' ? owner : buyer;
+
+    await expect(otc.connect(connectTo).buy('0', params.purchaseAmount)).to.be.revertedWith(params.expectedError);
   });
 };
 
 export default (isCelo: boolean = false) => {
-  const provider = new MockProvider();
-  const [buyer, seller] = provider.getWallets();
-
   const params = [
     {
-      provider,
-      seller,
-      buyer: seller,
+      buyer: 'owner',
       amount: Constants.E18_10,
       min: Constants.E18_1,
       price: Constants.E18_1,
@@ -68,9 +60,6 @@ export default (isCelo: boolean = false) => {
       isCelo,
     },
     {
-      provider,
-      seller,
-      buyer,
       amount: Constants.E18_10,
       min: Constants.E18_1,
       price: Constants.E18_1,
@@ -84,9 +73,6 @@ export default (isCelo: boolean = false) => {
       isCelo,
     },
     {
-      provider,
-      seller,
-      buyer,
       amount: Constants.E18_10,
       min: Constants.E18_1,
       price: Constants.E18_1,
@@ -100,9 +86,6 @@ export default (isCelo: boolean = false) => {
       isCelo,
     },
     {
-      provider,
-      seller,
-      buyer,
       amount: Constants.E18_10,
       min: Constants.E18_1,
       price: Constants.E18_100,

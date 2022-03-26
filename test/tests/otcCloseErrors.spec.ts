@@ -4,13 +4,10 @@ import { MockProvider } from 'ethereum-waffle';
 import { Wallet } from 'ethers';
 
 import * as Constants from '../constants';
-import { dealFixture } from '../fixtures';
+import { dealFixture, generateDealFixture } from '../fixtures';
 
 interface OTCCloseErrorParameters {
-  provider: Web3Provider;
-  seller: Wallet;
-  suspiciousSeller?: Wallet;
-  buyer: Wallet;
+  suspiciousSeller?: boolean;
   amount: string;
   min: string;
   price: string;
@@ -27,45 +24,34 @@ interface OTCCloseErrorParameters {
 
 const errorTest = async (params: OTCCloseErrorParameters) => {
   it(params.label, async () => {
-    const fixture = await dealFixture(
-      params.provider,
-      [params.seller, params.buyer],
-      params.amount,
-      params.min,
-      params.price,
-      params.maturity,
-      params.unlockDate,
-      params.whitelist
-    );
+    const { otc, owner, buyer, other } = await generateDealFixture({
+      amount: params.amount,
+      minimum: params.min,
+      price: params.price,
+      maturity: params.maturity,
+      unlockDate: params.unlockDate,
+      whitelist: params.whitelist,
+    });
 
-    let seller = params.seller;
-    if (params.suspiciousSeller) {
-      seller = params.suspiciousSeller;
-    }
+    let seller = params.suspiciousSeller ? other : owner;
 
     if (params.waitForBuyerPurchase) {
-      await fixture.otc.connect(params.buyer).buy(0, params.purchaseAmount);
+      await otc.connect(buyer).buy(0, params.purchaseAmount);
     }
 
     if (params.waitForDealClose) {
-      await fixture.otc.connect(seller).close(0);
+      await otc.connect(seller).close(0);
     }
 
-    await expect(fixture.otc.connect(seller).close(0)).to.be.revertedWith(params.expectedError);
+    await expect(otc.connect(seller).close(0)).to.be.revertedWith(params.expectedError);
   });
 };
 
 export default (isCelo: boolean = false) => {
-  const provider = new MockProvider();
-  const [buyer, seller, other] = provider.getWallets();
-
   const params = [
     {
-      provider,
-      buyer,
-      seller,
       isCelo,
-      suspiciousSeller: other,
+      suspiciousSeller: true,
       amount: Constants.E18_10,
       min: Constants.E18_1,
       price: Constants.E18_1,
@@ -77,10 +63,7 @@ export default (isCelo: boolean = false) => {
       label: 'reverts if msg.sender is not the seller',
     },
     {
-      provider,
-      buyer,
       waitForBuyerPurchase: true,
-      seller,
       isCelo,
       amount: Constants.E18_1,
       min: Constants.E18_1,

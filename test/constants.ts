@@ -1,5 +1,7 @@
 import { BigNumber } from 'ethers';
 
+export const nftBaseUrl = 'http://nft.hedgey.finance';
+
 export const Tokens = {
   TokenA: 'tokenA',
   TokenB: 'tokenB',
