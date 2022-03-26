@@ -115,7 +115,7 @@ contract CeloHedgeys is ERC721Enumerable, ReentrancyGuard {
     /// @dev ensure that only the owner of the NFT can call this function 
     require(ownerOf(_id) == _holder, 'NFT03');
     /// @dev pull the future data from storage and keep in memory to check requirements and disribute tokens
-    Future storage future = futures[_id];
+    Future memory future = futures[_id];
     /// @dev ensure that the unlockDate is in the past compared to block.timestamp
     /// @dev ensure that the future has not been redeemed already and that the amount is greater than 0
     require(future.unlockDate < block.timestamp && future.amount > 0, 'NFT04');
