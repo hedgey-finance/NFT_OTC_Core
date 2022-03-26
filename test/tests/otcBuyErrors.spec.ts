@@ -1,10 +1,7 @@
-import { Web3Provider } from '@ethersproject/providers';
 import { expect } from 'chai';
-import { MockProvider } from 'ethereum-waffle';
-import { Wallet } from 'ethers';
 
 import * as Constants from '../constants';
-import { dealFixture, generateDealFixture, generateOTCFixture } from '../fixtures';
+import { generateDealFixture } from '../fixtures';
 
 interface OTCBuyErrorParameters {
   buyer?: string;
