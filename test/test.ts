@@ -65,7 +65,7 @@ describe('Hedgey OTC Library', async () => {
   });
 
   describe('Celo OTC Contract', () => {
-    describe('Constructor', () => otcCreateErrorsTests(true));
+    describe('Constructor', () => otcConstructorTests(true));
     describe('Create Errors', () => otcCreateErrorsTests(true));
 
     describe('Creating', () => {
@@ -96,16 +96,15 @@ describe('Hedgey OTC Library', async () => {
 
     describe('Creating', () => nftCreateTests(false));
 
-    describe('Redeeming - Token', () => {
-      nftRedeemTests(false, false);
-    });
+    describe('Redeeming - Token', () => nftRedeemTests);
     describe('Redeeming - Weth', () => {
-      nftRedeemTests(true, false);
+      nftRedeemTests(true);
     });
 
     describe('Transferring - Token', () => {
       nftTransferTests(false, false);
     });
+
     describe('Transferring - Weth', () => {
       nftTransferTests(true, false);
     });
@@ -119,6 +118,7 @@ describe('Hedgey OTC Library', async () => {
     describe('Redeeming - Token', () => {
       nftRedeemTests(false, true);
     });
+
     describe('Transferring - Token', () => {
       nftTransferTests(false, true);
     });

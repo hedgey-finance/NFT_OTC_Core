@@ -1,20 +1,15 @@
+import { DummyTokens } from './../fixtures';
 import { expect } from 'chai';
-import { MockProvider } from 'ethereum-waffle';
-
 import { TestParameters, generateLabel, IIndexable } from '../helpers';
 import * as Constants from '../constants';
-import { otcFixture } from '../fixtures';
+import { generateOTCFixture } from '../fixtures';
 
 export default (params: TestParameters) => {
-  const provider = new MockProvider();
-  const [_, seller] = provider.getWallets();
-
   it(generateLabel(params), async () => {
-    const fixture = await otcFixture(provider, [seller], false, params.isCelo);
-    const otc = fixture.otc;
+    const { owner, otc, dummyTokens } = await generateOTCFixture({ isCelo: params.isCelo });
 
-    const token = (fixture as IIndexable)[params.asset];
-    const paymentToken = (fixture as IIndexable)[params.payment];
+    const token = dummyTokens[params.asset as keyof DummyTokens];
+    const paymentToken = dummyTokens[params.payment as keyof DummyTokens];
     const assetAndPaymentMatch = token.address === paymentToken.address;
     const prePaymentBalance = await paymentToken.balanceOf(otc.address);
 
@@ -35,7 +30,7 @@ export default (params: TestParameters) => {
       .to.emit(otc, 'NewDeal')
       .withArgs(
         '0',
-        seller.address,
+        owner.address,
         _tokenAddress,
         _paymentCurrencyAddress,
         _amount,
@@ -43,13 +38,12 @@ export default (params: TestParameters) => {
         _price,
         _maturity,
         _unlockDate,
-        true,
         _buyer
       );
 
     // Check our deal has been created
     const deal = await otc.deals(0);
-    expect(deal[0]).to.eq(seller.address);
+    expect(deal[0]).to.eq(owner.address);
     expect(deal[1]).to.eq(_tokenAddress);
     expect(deal[2]).to.eq(_paymentCurrencyAddress);
     expect(deal[3]).to.eq(_amount);
@@ -57,8 +51,7 @@ export default (params: TestParameters) => {
     expect(deal[5]).to.eq(_price);
     expect(deal[6]).to.eq(_maturity);
     expect(deal[7]).to.eq(_unlockDate);
-    expect(deal[8]).to.eq(true);
-    expect(deal[9]).to.eq(_buyer);
+    expect(deal[8]).to.eq(_buyer);
 
     const postTokenBalance = await token.balanceOf(otc.address);
     const postPaymentBalance = await paymentToken.balanceOf(otc.address);

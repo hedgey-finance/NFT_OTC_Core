@@ -1,13 +1,9 @@
-import { MockProvider } from 'ethereum-waffle';
 import { expect } from 'chai';
 
-import { dealFixture } from '../fixtures';
+import { generateDealFixture } from '../fixtures';
 import * as Constants from '../constants';
 
 export default (isCelo: boolean = false) => {
-  const provider = new MockProvider();
-  const [seller, buyer] = provider.getWallets();
-
   const amount = Constants.E18_10;
   const min = Constants.E18_1;
   const price = Constants.E18_1;
@@ -15,22 +11,17 @@ export default (isCelo: boolean = false) => {
   const unlockDate = Constants.IN_ONE_HOUR;
 
   it('closes the deal', async () => {
-    const fixture = await dealFixture(
-      provider,
-      [seller, buyer],
+    const { owner, buyer, otc, tokenA } = await generateDealFixture({
       amount,
-      min,
+      minimum: min,
       price,
       maturity,
       unlockDate,
-      Constants.ZERO_ADDRESS,
-      Constants.Tokens.TokenA,
-      Constants.Tokens.TokenB,
-      isCelo
-    );
-
-    const otc = fixture.otc;
-    const tokenA = fixture.tokenA;
+      whitelist: Constants.ZERO_ADDRESS,
+      asset: Constants.Tokens.TokenA,
+      payment: Constants.Tokens.TokenB,
+      isCelo,
+    });
 
     //check the before balance of the otc address to make sure fixture instantiated correctly
     expect(await tokenA.balanceOf(otc.address)).to.eq(amount);
@@ -39,6 +30,5 @@ export default (isCelo: boolean = false) => {
 
     const deal = await otc.deals(0);
     expect(deal[3]).to.eq('0'); //remainder == 0
-    expect(deal[8]).to.eq(false); //bool set to false
   });
 };

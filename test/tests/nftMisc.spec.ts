@@ -15,7 +15,15 @@ export default (isCelo: boolean = false) => {
   let uri = 'hello/';
 
   it('updates the baseURI', async () => {
-    const fixture = await createdNFTFixture(provider, [wallet], false, wallet, Constants.E18_1, Constants.IN_ONE_HOUR, isCelo);
+    const fixture = await createdNFTFixture(
+      provider,
+      [wallet],
+      false,
+      wallet,
+      Constants.E18_1,
+      Constants.IN_ONE_HOUR,
+      isCelo
+    );
     nft = fixture.nft;
     weth = fixture.weth;
     await nft.updateBaseURI(uri);
@@ -28,6 +36,6 @@ export default (isCelo: boolean = false) => {
   }
   it('reverts if the baseURI is updated twice', async () => {
     uri = 'goodbye';
-    await expect(nft.updateBaseURI(uri)).to.be.revertedWith('HNEC06: uri already set');
+    await expect(nft.updateBaseURI(uri)).to.be.revertedWith('NFT02');
   });
 };

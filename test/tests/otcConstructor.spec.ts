@@ -1,51 +1,37 @@
-import { WETH9 } from '@thenextblock/hardhat-weth';
+import { deployWeth, WETH9 } from '@thenextblock/hardhat-weth';
 import { expect } from 'chai';
-import { MockProvider } from 'ethereum-waffle';
-import { Contract } from 'ethers';
+import { ethers } from 'hardhat';
+import { Contract, ContractFactory } from 'ethers';
 
-import * as Constants from '../constants';
-import { dealFixture } from '../fixtures';
+import { nftBaseUrl } from '../constants';
 
 export default (isCelo: boolean = false) => {
+  let OTC: ContractFactory;
   let otc: Contract;
   let weth: WETH9;
+  let NFT: ContractFactory;
   let nft: Contract;
 
-  const provider = new MockProvider();
-  const [buyer, seller] = provider.getWallets();
-
-  const price = Constants.E18_10;
-  const amount = Constants.E18_10;
-  const min = Constants.E18_1;
-  const whitelist = Constants.ZERO_ADDRESS;
-
-  const maturity = Constants.IN_ONE_HOUR;
-  const unlockDate = Constants.IN_ONE_HOUR;
-
   before(async () => {
-    const dealContract = await dealFixture(
-      provider,
-      [seller, buyer],
-      amount,
-      min,
-      price,
-      maturity,
-      unlockDate,
-      whitelist,
-      Constants.Tokens.TokenA,
-      Constants.Tokens.TokenB,
-      isCelo
-    );
+    const [owner] = await ethers.getSigners();
+    weth = await deployWeth(owner);
+    OTC = await ethers.getContractFactory(isCelo ? 'CeloHedgeyOTC' : 'HedgeyOTC');
+    NFT = await ethers.getContractFactory(isCelo ? 'CeloHedgeys' : 'Hedgeys');
 
-    otc = dealContract.otc;
-    weth = dealContract.weth;
-    nft = dealContract.nft;
+    nft = isCelo ? await NFT.deploy(nftBaseUrl) : await NFT.deploy(weth.address, nftBaseUrl);
+    otc = isCelo ? await OTC.deploy(nft.address) : await OTC.deploy(await nft.weth(), nft.address);
   });
 
-  it('should have weth set', async () => {
-    const otcWeth = await otc.weth();
-    expect(otcWeth).equal(weth.address);
-  });
+  if (isCelo) {
+    it('should have not have weth method', async () => {
+      expect(otc.weth).equal(undefined);
+    });
+  } else {
+    it('should have weth set', async () => {
+      const otcWeth = await otc.weth();
+      expect(otcWeth).equal(weth.address);
+    });
+  }
 
   it('should have base URI set', async () => {
     const futuresContract = await otc.futureContract();

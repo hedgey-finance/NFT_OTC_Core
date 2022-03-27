@@ -1,13 +1,9 @@
 import { expect } from 'chai';
-import { MockProvider } from 'ethereum-waffle';
-
 import * as Constants from '../constants';
-import { dealFixture } from '../fixtures';
+import { generateDealFixture } from '../fixtures';
 import { TestParameters, generateLabel, IIndexable } from '../helpers';
 
 export default (params: TestParameters) => {
-  const provider = new MockProvider();
-  const [seller, buyer] = provider.getWallets();
   const whitelist = Constants.ZERO_ADDRESS;
 
   it(generateLabel(params), async () => {
@@ -20,30 +16,32 @@ export default (params: TestParameters) => {
     const wethAsset = params.asset === Constants.Tokens.Weth;
     const wethPayment = params.payment === Constants.Tokens.Weth;
 
-    const fixture = await dealFixture(
-      provider,
-      [seller, buyer],
-      _amount,
-      _min,
-      _price,
-      _maturity,
-      _unlockDate,
-      whitelist,
-      params.asset,
-      params.payment,
-      params.isCelo
-    );
+    const fixture = await generateDealFixture({
+      amount: _amount,
+      minimum: _min,
+      price: _price,
+      maturity: _maturity,
+      unlockDate: _unlockDate,
+      whitelist: whitelist,
+      asset: params.asset,
+      payment: params.payment,
+      isCelo: params.isCelo || false,
+    });
+    const buyer = fixture.buyer;
+    const seller = fixture.owner;
+
     const otc = fixture.otc;
 
     const token = (fixture as IIndexable)[params.asset];
     const paymentToken = (fixture as IIndexable)[params.payment];
     const nft = fixture.nft;
 
-    const preBuyerEthBalance = await provider.getBalance(buyer.address);
+    // const preBuyerEthBalance = await provider.getBalance(buyer.address);
+    const preBuyerEthBalance = await buyer.getBalance();
     const preBuyerBalance = await token.balanceOf(buyer.address);
     const preBuyerPaymentBalance = await paymentToken.balanceOf(buyer.address);
 
-    const preSellerEthBalance = await provider.getBalance(seller.address);
+    const preSellerEthBalance = await seller.getBalance();
     const preSellerBalance = await token.balanceOf(seller.address);
     const preSellerPaymentBalance = await paymentToken.balanceOf(seller.address);
 
@@ -54,11 +52,11 @@ export default (params: TestParameters) => {
 
     const gasEstimate = txReceipt.gasPrice.mul(txReceipt.gasLimit);
 
-    const postBuyerEthBalance = await provider.getBalance(buyer.address);
+    const postBuyerEthBalance = await buyer.getBalance();
     const postBuyerBalance = await token.balanceOf(buyer.address);
     const postBuyerPaymentBalance = await paymentToken.balanceOf(buyer.address);
 
-    const postSellerEthBalance = await provider.getBalance(seller.address);
+    const postSellerEthBalance = await seller.getBalance();
     const postSellerBalance = await token.balanceOf(seller.address);
     const postSellerPaymentBalance = await paymentToken.balanceOf(seller.address);
 
@@ -66,9 +64,6 @@ export default (params: TestParameters) => {
     else if (params.asset === params.payment) expect(preSellerBalance).to.eq(postSellerBalance.sub(_amount));
     else expect(preSellerBalance).to.eq(postSellerBalance);
 
-    const deal = await otc.deals(0);
-
-    expect(deal[8]).to.eq(false); //bool set to false
     expect(await token.balanceOf(otc.address)).to.eq('0');
     expect(await paymentToken.balanceOf(otc.address)).to.eq('0');
 
