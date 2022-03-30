@@ -5,6 +5,7 @@ import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import '@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol';
 import '../libraries/TransferHelper.sol';
+import '../libraries/NFTHelper.sol';
 import '../interfaces/INFT.sol';
 
 /// @notice this is a smart contract for example only that will pay token rewards for locking up tokens (once)
@@ -17,7 +18,10 @@ contract NFTFarmer is ReentrancyGuard {
   address public lockToken;
   uint256 public rewardRate;
   uint256 public rewards;
+  uint256 public remainingRewards;
   address public nftContract;
+  bool private initialized;
+  address private funder;
   mapping(address => bool) public claimed;
 
   constructor(
@@ -36,36 +40,52 @@ contract NFTFarmer is ReentrancyGuard {
     TransferHelper.transferTokens(_rewardToken, msg.sender, address(this), _rewards);
   }
 
-  /// @notice function to get the balances for a given wallet
-  function getLockedTokenBalance(address holder) public view returns (uint256 lockedTokens) {
-    uint256 holdersBalance = IERC721(nftContract).balanceOf(holder);
-    /// @dev for loop going through the holders balance to get each of their token IDs
-    for (uint256 i = 0; i < holdersBalance; i++) {
-      /// @dev gets the tokenId
-      uint256 tokenId = IERC721Enumerable(nftContract).tokenOfOwnerByIndex(holder, i);
-      /// @dev now we can use that tokenId to get their time lock details
-      (uint256 amount, address token, uint256 unlockDate) = INFT(nftContract).futures(tokenId);
-      /// @dev only record the amounts that match the locked token we are tracking and paying rewards for
-      if (token == lockToken) {
-        lockedTokens += amount;
-      }
-    }
+  /// @dev function to iniaitlize and pull the funds into the contract to be paid out
+  /// @dev this would probably be an onlyOwner function in real usage
+  function initialize(uint256 totalRewards) public {
+    require(!initialized, 'already initalized');
+    initialized = true;
+    TransferHelper.transferTokens(rewardToken, msg.sender, address(this), totalRewards);
+    /// @dev set the remaining amount to the total
+    remainingRewards = totalRewards;
+    /// @dev set our nice funder to the msg.sender - thanks for funding the contract!
+    funder = msg.sender;
+    emit Started(totalRewards);
   }
 
   /// @notice this is a super basic example yield farming function
   /// @notice all it does is prove that you have locked tokens and can therefore claim some rewards
   /// @notice only allowed to claim once though based on our mapping
   function claimRewards() public nonReentrant {
+    require(initialized, 'not initialized');
     require(!claimed[msg.sender], 'already claimed your rewards');
     /// @dev set to true for reentrancy guard
     claimed[msg.sender] == true;
     /// @dev get their locked token balance
-    uint256 lockedTokens = getLockedTokenBalance(msg.sender);
+    uint256 lockedTokens = NFTHelper.getLockedTokenBalance(nftContract, msg.sender, lockToken);
     /// @dev calculate rewards to deliver
     uint256 payout = lockedTokens * rewardRate;
+    /// @dev check that there is enough in the contract to pay
+    require(remainingRewards >= payout, 'not enough rewards left');
+    /// @dev subtract the payout
+    remainingRewards -= payout;
+    /// @dev transfer the rewards from this contract to the claimmant
     TransferHelper.withdrawTokens(rewardToken, msg.sender, payout);
     emit RewardsClaimed(msg.sender, lockedTokens, payout);
   }
 
+  function close() public nonReentrant {
+    require(initialized, 'not initialized');
+    require(msg.sender == funder, 'not the funder');
+    /// @dev set the initialized back to false!
+    initialized = false;
+    require(remainingRewards > 0, 'nothing left');
+    /// @dev send the remainder home
+    TransferHelper.withdrawTokens(rewardToken, funder, remainingRewards);
+    emit Closed(remainingRewards);
+  }
+
+  event Started(uint256 _totalRewards);
   event RewardsClaimed(address _claimer, uint256 _lockedTokens, uint256 _payout);
+  event Closed(uint256 _remainingTokens);
 }

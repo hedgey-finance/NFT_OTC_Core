@@ -37,7 +37,7 @@ library NFTHelper {
   }
 
   /// @notice function to get the balances for a given wallet
-  function getLockedTokenBalance(address futureContract, address holder)
+  function getLockedTokenDetails(address futureContract, address holder)
     public
     view
     returns (
@@ -57,6 +57,22 @@ library NFTHelper {
       amounts[i] = amount;
       tokens[i] = token;
       unlockDates[i] = unlockDate;
+    }
+  }
+
+  function getLockedTokenBalance(address futureContract, address holder, address lockedToken) public view returns (uint256 lockedAmount) {
+     uint256 holdersBalance = INFT(futureContract).balanceOf(holder);
+    /// @dev for loop going through the holders balance to get each of their token IDs
+    for (uint256 i = 0; i < holdersBalance; i++) {
+      /// @dev gets the tokenId
+      uint256 tokenId = INFT(futureContract).tokenOfOwnerByIndex(holder, i);
+      /// @dev now we can use that tokenId to get their time lock details
+      (uint256 amount, address token,) = INFT(futureContract).futures(tokenId);
+      /// @dev check if the token matches the lockedToken criteria
+      if (token == lockedToken) {
+        /// @dev if it does - add it to the sum total
+        lockedAmount += amount;
+      }
     }
   }
 }
