@@ -35,4 +35,28 @@ library NFTHelper {
     uint256 postBalance = IERC20(_token).balanceOf(futureContract);
     assert(postBalance - currentBalance == _amount);
   }
+
+  /// @notice function to get the balances for a given wallet
+  function getLockedTokenBalance(address futureContract, address holder)
+    public
+    view
+    returns (
+      uint256[] memory amounts,
+      address[] memory tokens,
+      uint256[] memory unlockDates
+    )
+  {
+    uint256 holdersBalance = INFT(futureContract).balanceOf(holder);
+    /// @dev for loop going through the holders balance to get each of their token IDs
+    for (uint256 i = 0; i < holdersBalance; i++) {
+      /// @dev gets the tokenId
+      uint256 tokenId = INFT(futureContract).tokenOfOwnerByIndex(holder, i);
+      /// @dev now we can use that tokenId to get their time lock details
+      (uint256 amount, address token, uint256 unlockDate) = INFT(futureContract).futures(tokenId);
+      /// @dev add these to the array
+      amounts[i] = amount;
+      tokens[i] = token;
+      unlockDates[i] = unlockDate;
+    }
+  }
 }

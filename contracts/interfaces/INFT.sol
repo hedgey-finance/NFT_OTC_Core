@@ -14,6 +14,10 @@ interface INFT {
       address token,
       uint256 unlockDate
     );
+    /// @dev Returns the number of tokens in ``owner``'s account.
+    function balanceOf(address owner) external view returns (uint256 balance);
+    function tokenOfOwnerByIndex(address owner, uint256 index) external view returns (uint256);
+    function tokenByIndex(uint256 index) external view returns (uint256);
 
   /// @param _holder is the new owner of the NFT and timelock future - this can be any address
   /// @param _amount is the amount of tokens that are going to be locked
