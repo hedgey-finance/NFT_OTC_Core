@@ -23,8 +23,8 @@ npx hardhat test
 
 ## Active Mainnet Deployments  
 All of the smart contracts on production mainnets have been deployed at the same addresses below:  
-Hedgeys (Futures.sol): `0xad337077480134028B7C68AF290E891ce28076Eb`  
-HedgeyOTC: `0x2AA5d15Eb36E5960d056e8FeA6E7BB3e2a06A351`  
+Hedgeys (Futures.sol): `0x2AA5d15Eb36E5960d056e8FeA6E7BB3e2a06A351`    
+HedgeyOTC: `0xad337077480134028B7C68AF290E891ce28076Eb`  
 
 Deployments on below mainnets:  
 - Ethereum Mainnet  
