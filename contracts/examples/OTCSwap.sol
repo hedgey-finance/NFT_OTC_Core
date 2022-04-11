@@ -217,14 +217,14 @@ contract OTCSwap is ReentrancyGuard {
     /// @dev reduce the deal remaining amount by how much was purchased
     deal.remainingAmount -= _amount;
     /// @dev emit an even signifying that the buyer has purchased tokens from the seller, what amount, and how much remains to be purchased in this deal
-    emit TokensBought(_d, _amount, deal.remainingAmount);
+    emit TokensBought(_d, deal.seller, _amount, deal.remainingAmount);
     if (deal.unlockSellDate > block.timestamp) {
       /// @dev if the unlockdate is the in future, then payment tokens will be sent to the futureContract, and NFT minted to the seller
       /// @dev the seller can redeem and unlock their tokens interacting with the futureContract after the unlockDate has passed
       /// @notice this is really just useful for a token<>token swap where both token swappers are locking their tokens for a certain period of time
-      NFTHelper.lockTokens(futureContract, msg.sender, deal.paymentCurrency, purchase, deal.unlockSellDate);
+      NFTHelper.lockTokens(futureContract, deal.seller, deal.paymentCurrency, purchase, deal.unlockSellDate);
       /// @dev emit an event that a Future, ie locked tokens event, has happened
-      emit FutureCreated(msg.sender, deal.paymentCurrency, purchase, deal.unlockSellDate);
+      emit FutureCreated(deal.seller, deal.seller, deal.paymentCurrency, purchase, deal.unlockSellDate);
     } else {
       /// @dev transfer the paymentCurrency purchase amount from the buyer to the seller's address. If the paymentCurrency is WETH - seller will receive ETH
       TransferHelper.transferPayment(weth, deal.paymentCurrency, msg.sender, payable(deal.seller), purchase);
@@ -234,7 +234,7 @@ contract OTCSwap is ReentrancyGuard {
       /// @dev the buyer can redeem and unlock their tokens interacting with the futureContract after the unlockDate has passed
       NFTHelper.lockTokens(futureContract, msg.sender, deal.token, _amount, deal.unlockBuyDate);
       /// @dev emit an event that a Future, ie locked tokens event, has happened
-      emit FutureCreated(msg.sender, deal.token, _amount, deal.unlockBuyDate);
+      emit FutureCreated(deal.seller, msg.sender, deal.token, _amount, deal.unlockBuyDate);
     } else {
       /// @dev if the unlockDate is in the past or now - then tokens are already unlocked and delivered directly to the buyer
       TransferHelper.withdrawPayment(weth, deal.token, payable(msg.sender), _amount);
@@ -263,7 +263,7 @@ contract OTCSwap is ReentrancyGuard {
     uint256 _unlockSellDate,
     bool _isWhitelist
   );
-  event TokensBought(uint256 _d, uint256 _amount, uint256 _remainingAmount);
+  event TokensBought(uint256 _d, address _seller, uint256 _amount, uint256 _remainingAmount);
   event DealClosed(uint256 _d);
-  event FutureCreated(address _owner, address _token, uint256 _amount, uint256 _unlockDate);
+  event FutureCreated(address _seller, address _owner, address _token, uint256 _amount, uint256 _unlockDate);
 }
