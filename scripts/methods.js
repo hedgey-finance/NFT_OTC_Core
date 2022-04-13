@@ -12,6 +12,7 @@ const nft = require("../artifacts/contracts/FuturesNFT.sol/Hedgeys.json");
 const otc = require("../artifacts/contracts/HedgeyOTC.sol/HedgeyOTC.json");
 
 
+
 async function sendTx(web3, network, encodedABI, address, wallet, value, gwei) {
     const publicKey = wallet.publicKey;
     const privKey = wallet.privateKey;
@@ -40,7 +41,7 @@ async function sendTx(web3, network, encodedABI, address, wallet, value, gwei) {
         .catch(console.log);
 }
 
-const setupWeb3 = async (provider, target) => {
+async function setupWeb3(provider, target) {
     const network = networks[provider];
     let address;
     let point;
@@ -78,6 +79,51 @@ const setupWeb3 = async (provider, target) => {
         address,
         network,
     }
+}
+
+async function deploy(provider, wallet, target, constructorArgs, gwei) {
+    const network = networks[provider];
+    const customChain = Common.forCustomChain(
+        'mainnet',
+        {
+            name: network.name,
+            networkId: network.chainID,
+            chainId: network.chainID,
+        },
+        'petersburg'
+    )
+    const rpcURL = network.url;
+    const web3 = new Web3(rpcURL);
+    const abi = target.abi;
+    const data = target.bytecode;
+    const myContract = new web3.eth.Contract(abi);
+    const encodedABI = await myContract.deploy({
+        data: data,
+        arguments: constructorArgs
+    }).encodeABI();
+    const publicKey = wallet.publicKey;
+    const privKey = wallet.privateKey;
+    const privateKey = Buffer.from(privKey, 'hex');
+    const transactionNonce = await web3.eth.getTransactionCount(publicKey, "pending");
+    const transactionObject = {
+        nonce: web3.utils.toHex(transactionNonce),
+        gasLimit: web3.utils.toHex(8000000),
+        gasPrice: web3.utils.toHex(gwei * (10 ** 9)),
+        from: publicKey,
+        data: encodedABI,
+        value: 0
+    }
+    const tx = new Tx(transactionObject, { common: customChain });
+    tx.sign(privateKey);
+    const serializedEthTx = tx.serialize();
+    await web3.eth.sendSignedTransaction('0x' + serializedEthTx.toString('hex')).on('transactionHash', (hash) => {
+        console.log(hash);
+    })
+        .on('receipt', (receipt) => {
+            console.log(receipt.contractAddress);
+            futuresAddress = receipt.contractAddress;
+        })
+        .catch(console.log);
 }
 
 async function approve(provider, wallet, token, address, gwei) {
@@ -152,19 +198,19 @@ async function redeemNFT(provider, wallet, futureId, gwei) {
     sendTx(setup.web3, setup.customChain, encodedABI, setup.address, wallet, 0, gwei);
 }
 
-const getDeal = async (provider, dealId) => {
+async function getDeal(provider, dealId) {
     const setup = await setupWeb3(provider, 'otc');
     const deal = await setup.contract.methods.deals(dealId).call();
     return deal;
 }
 
-const getFuture = async (provider, nftId) => {
+async function getFuture(provider, nftId) {
     const setup = await setupWeb3(provider, 'nft');
     const future = await setup.contract.methods.futures(nftId).call();
     return future;
 }
 
-const getBalance = async (provider, token, walletAddress) => {
+async function getBalance(provider, token, walletAddress) {
     const network = networks[provider];
     const rpcURL = network.url;
     const web3 = new Web3(rpcURL);
@@ -179,7 +225,7 @@ const getBalance = async (provider, token, walletAddress) => {
     }
 }
 
-const getLockedTokenDetails = async (provider, walletAddress) => {
+async function getLockedTokenDetails(provider, walletAddress) {
     const setup = await setupWeb3(provider, 'nft');
     const nftBalance = await setup.contract.methods.balanceOf(walletAddress).call();
     let nftsDetails = {};
@@ -192,7 +238,7 @@ const getLockedTokenDetails = async (provider, walletAddress) => {
     return nftsDetails;
 }
 
-const getLockedTokenBalance = async (provider, walletAddress, token) => {
+async function getLockedTokenBalance(provider, walletAddress, token) {
     const setup = await setupWeb3(provider, 'nft');
     const nftBalance = await setup.contract.methods.balanceOf(walletAddress).call();
     let tokenBalance = 0;
@@ -209,6 +255,7 @@ const getLockedTokenBalance = async (provider, walletAddress, token) => {
 
 module.exports = {
     approve,
+    deploy,
     batchMint,
     createDeal,
     closeDeal,
