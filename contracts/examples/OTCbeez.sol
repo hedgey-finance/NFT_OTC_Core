@@ -153,7 +153,7 @@ contract HedgeyOTCBeez is ReentrancyGuard {
     /// @dev require that the deal order is still valid by checking if the block time is not passed the maturity date
     require(deal.maturity >= block.timestamp, 'OTC07');
     /// @dev if the deal has a NFT ownership requirement, then we need to ensure the buyer owns an NFT
-    require(IERC721(deal.beez).balanceOf(msg.sender) > 1 || deal.beez == address(0x0), 'OTC08');
+    require(IERC721(deal.beez).balanceOf(msg.sender) > 0 || deal.beez == address(0x0), 'OTC08');
     /// @dev require that the amount being purchased is greater than the deal minimum, or that the amount being purchased is the entire remainder of whats left
     /// @dev AND require that the remaining amount in the deal actually equals or exceeds what the buyer wants to purchase
     require(
