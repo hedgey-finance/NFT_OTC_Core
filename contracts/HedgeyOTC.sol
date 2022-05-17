@@ -5,6 +5,7 @@ import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import './interfaces/Decimals.sol';
 import './libraries/TransferHelper.sol';
 import './libraries/NFTHelper.sol';
+import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 
 /**
  * @title HedgeyOTC is an over the counter peer to peer trading contract
@@ -58,12 +59,60 @@ contract HedgeyOTC is ReentrancyGuard {
     uint256 maturity;
     uint256 unlockDate;
     address buyer;
+    address nft;
   }
 
   /// @dev the Deals are all mapped via the indexer d to deals mapping
   mapping(uint256 => Deal) public deals;
 
   receive() external payable {}
+
+  /**
+   * @notice This function is what the seller uses to create a new OTC offering
+   * @notice Once this function has been completed - buyers can purchase tokens from the seller based on the price and parameters set
+   * @dev this function will pull in tokens from the seller, create a new Deal struct and mapped to the current index d
+   * @dev this function does not allow for taxed / deflationary tokens - as the amount that is pulled into the contract must match with what is being sent
+   * @dev this function requires that the _token has a decimals() public function on its ERC20 contract to be called
+   * @param _token is the ERC20 contract address that the seller is going to create the over the counter offering for
+   * @param _paymentCurrency is the ERC20 contract address of the opposite ERC20 that the seller wants to get paid in when selling the token (use WETH for ETH)
+   * ... this can also be used for a token SWAP - where the ERC20 address of the token being swapped to is input as the paymentCurrency
+   * @param _amount is the amount of tokens that you as the seller want to sell
+   * @param _min is the minimum amount of tokens that a buyer can purchase from you. this should be less than or equal to the total amount
+   * @param _price is the price per token which the seller will get paid, denominated in the payment currency
+   * ... if this is a token SWAP, then the _price needs to be set as the ratio of the tokens being swapped - ie 10 for 10 paymentCurrency tokens to 1 token
+   * @param _maturity is how long you would like to allow buyers to purchase tokens from this deal, in unix time. this needs to be beyond current block time
+   * @param _unlockDate is used if you are requiring that tokens purchased by buyers are locked. If this is set to 0 or anything less than current block time
+   * ... any tokens purchased will not be locked but immediately delivered to the buyers. Otherwise the unlockDate will lock the tokens in the associated
+   * ... futureContract and mint the buyer an NFT - which will hold the tokens in escrow until the unlockDate has passed - whereupon the owner of the NFT can redeem the tokens
+   * @param _buyer is a special option to make this a private deal - where only a specific buyer's address can participate and make the purchase. If this is set to the
+   * ... Zero address - then it is publicly available and anyone can purchase tokens from this deal
+   * @param _nft is the address of the NFT contract the buyer needs to own
+   */
+  function createGated(
+    address _token,
+    address _paymentCurrency,
+    uint256 _amount,
+    uint256 _min,
+    uint256 _price,
+    uint256 _maturity,
+    uint256 _unlockDate,
+    address payable _buyer,
+    address _nft
+  ) external payable nonReentrant {
+     /// @dev check to make sure that the maturity is beyond current block time
+    require(_maturity > block.timestamp, 'OTC01');
+    /// @dev check to make sure that the total amount is grater than or equal to the minimum
+    require(_amount >= _min, 'OTC02');
+    /// @dev this checks to make sure that if someone purchases the minimum amount, it is never equal to 0
+    /// @dev where someone could find a small enough minimum to purchase all of the tokens for free.
+    require((_min * _price) / (10**Decimals(_token).decimals()) > 0, 'OTC03');
+    /// @dev creates the Deal struct with all of the parameters for inputs - and set the bool 'open' to true so that this offer can now be purchased
+    deals[d++] = Deal(msg.sender, _token, _paymentCurrency, _amount, _min, _price, _maturity, _unlockDate, _buyer, _nft);
+    /// @dev pulls the tokens into this contract so that they can be purchased. If ETH is being used, it will pull ETH and wrap and receive WETH into this contract
+    TransferHelper.transferPayment(weth, _token, payable(msg.sender), payable(address(this)), _amount);
+    /// @dev emit an event with the parameters of the deal, because counter d has already been increased by 1, need to subtract one when emitting the event
+    emit NewDeal(d - 1, msg.sender, _token, _paymentCurrency, _amount, _min, _price, _maturity, _unlockDate, _buyer, _nft);
+  }
 
   /**
    * @notice This function is what the seller uses to create a new OTC offering
@@ -95,7 +144,7 @@ contract HedgeyOTC is ReentrancyGuard {
     uint256 _unlockDate,
     address payable _buyer
   ) external payable nonReentrant {
-    /// @dev check to make sure that the maturity is beyond current block time
+     /// @dev check to make sure that the maturity is beyond current block time
     require(_maturity > block.timestamp, 'OTC01');
     /// @dev check to make sure that the total amount is grater than or equal to the minimum
     require(_amount >= _min, 'OTC02');
@@ -103,11 +152,11 @@ contract HedgeyOTC is ReentrancyGuard {
     /// @dev where someone could find a small enough minimum to purchase all of the tokens for free.
     require((_min * _price) / (10**Decimals(_token).decimals()) > 0, 'OTC03');
     /// @dev creates the Deal struct with all of the parameters for inputs - and set the bool 'open' to true so that this offer can now be purchased
-    deals[d++] = Deal(msg.sender, _token, _paymentCurrency, _amount, _min, _price, _maturity, _unlockDate, _buyer);
+    deals[d++] = Deal(msg.sender, _token, _paymentCurrency, _amount, _min, _price, _maturity, _unlockDate, _buyer, address(0));
     /// @dev pulls the tokens into this contract so that they can be purchased. If ETH is being used, it will pull ETH and wrap and receive WETH into this contract
     TransferHelper.transferPayment(weth, _token, payable(msg.sender), payable(address(this)), _amount);
     /// @dev emit an event with the parameters of the deal, because counter d has already been increased by 1, need to subtract one when emitting the event
-    emit NewDeal(d - 1, msg.sender, _token, _paymentCurrency, _amount, _min, _price, _maturity, _unlockDate, _buyer);
+    emit NewDeal(d - 1, msg.sender, _token, _paymentCurrency, _amount, _min, _price, _maturity, _unlockDate, _buyer, address(0));
   }
 
   /**
@@ -152,6 +201,9 @@ contract HedgeyOTC is ReentrancyGuard {
     require(msg.sender != deal.seller, 'OTC06');
     /// @dev require that the deal order is still valid by checking if the block time is not passed the maturity date
     require(deal.maturity >= block.timestamp, 'OTC07');
+    if (deal.nft != address(0)) {
+      require(IERC721(deal.nft).balanceOf(msg.sender) > 0, 'OTC08');
+    }
     /// @dev if the deal had a whitelist - then require the msg.sender to be that buyer, otherwise if there was no whitelist, anyone can buy
     require(msg.sender == deal.buyer || deal.buyer == address(0x0), 'OTC08');
     /// @dev require that the amount being purchased is greater than the deal minimum, or that the amount being purchased is the entire remainder of whats left
@@ -200,7 +252,8 @@ contract HedgeyOTC is ReentrancyGuard {
     uint256 _price,
     uint256 _maturity,
     uint256 _unlockDate,
-    address _buyer
+    address _buyer,
+    address _nft
   );
   event TokensBought(uint256 _d, uint256 _amount, uint256 _remainingAmount);
   event DealClosed(uint256 _d);
