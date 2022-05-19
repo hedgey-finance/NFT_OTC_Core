@@ -2,9 +2,9 @@
 pragma solidity 0.8.13;
 
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
-import './interfaces/Decimals.sol';
-import './libraries/TransferHelper.sol';
-import './libraries/NFTHelper.sol';
+import '../interfaces/Decimals.sol';
+import '../libraries/TransferHelper.sol';
+import '../libraries/NFTHelper.sol';
 import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 
 /**
