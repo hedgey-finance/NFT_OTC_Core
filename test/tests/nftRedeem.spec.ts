@@ -3,10 +3,9 @@ import { expect } from 'chai';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
 import { Contract } from 'ethers';
-
-import { inSixSeconds, inTenSeconds } from '../helpers';
 import * as Constants from '../constants';
 import { createdNFTFixture } from '../fixtures';
+import { getBlockTimePlusSeconds } from '../helpers';
 
 export default (isWeth: boolean = false, isCelo: boolean = false) => {
   const amount = Constants.E18_1;
@@ -20,8 +19,7 @@ export default (isWeth: boolean = false, isCelo: boolean = false) => {
   let other: SignerWithAddress;
 
   beforeEach(async () => {
-    unlockDate = inSixSeconds();
-
+    unlockDate = await getBlockTimePlusSeconds(10);
     const fixture = await createdNFTFixture(isWeth, amount, unlockDate, isCelo);
     token = fixture.token;
     nft = fixture.nft;

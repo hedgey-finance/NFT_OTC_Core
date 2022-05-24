@@ -1,9 +1,7 @@
 import { expect } from 'chai';
-import { WETH9 } from '@thenextblock/hardhat-weth';
-import { inTenSeconds } from '../helpers';
 import * as Constants from '../constants';
 import { newNFTFixture } from '../fixtures';
-import { constants } from 'buffer';
+import { getBlockTimePlusSeconds } from '../helpers';
 
 export default (isCelo: boolean = false) => {
   let unlockDate: string;
@@ -11,11 +9,10 @@ export default (isCelo: boolean = false) => {
   const amount = Constants.E18_1;
 
   beforeEach(async () => {
-    unlockDate = inTenSeconds();
+    unlockDate = await getBlockTimePlusSeconds(20);
   });
 
   it('create an NFT', async () => {
-    //let unlockDate = (Math.round(Date.now() / 1000) + 10).toString()
     const fixture = await newNFTFixture(isCelo);
     const token = fixture.token;
     const nft = fixture.nft;

@@ -1,13 +1,11 @@
 import { expect } from 'chai';
-import { inTenSeconds } from '../helpers';
+import { getBlockTimePlusSeconds } from '../helpers';
 import * as Constants from '../constants';
 import { newNFTFixture } from '../fixtures';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { Contract } from 'ethers';
 
 export default (isCelo: boolean = false) => {
-  let unlockDate: string;
-
   const amount = Constants.E18_1;
   let token: Contract;
   let nft: Contract;
@@ -17,7 +15,6 @@ export default (isCelo: boolean = false) => {
   let batch: Contract;
 
   beforeEach(async () => {
-    unlockDate = inTenSeconds();
     const fixture = await newNFTFixture(isCelo);
     token = fixture.token;
     nft = fixture.nft;
@@ -51,6 +48,9 @@ export default (isCelo: boolean = false) => {
       amount,
       Constants.E18_10,
     ];
+
+    const unlockDate = await getBlockTimePlusSeconds(10);
+
     const unlockDates = [
       unlockDate,
       unlockDate,
@@ -89,6 +89,7 @@ export default (isCelo: boolean = false) => {
   it('reverts if the sizes of arrays are different', async () => {
     const holders = [wallet.address, walletA.address];
     const amounts = [amount, amount, amount];
+    const unlockDate = await getBlockTimePlusSeconds(10);
     const unlockDates = [unlockDate, unlockDate, unlockDate];
     await expect(batch.batchMint(nft.address, holders, token.address, amounts, unlockDates)).to.be.revertedWith(
       'array size wrong'
@@ -97,6 +98,7 @@ export default (isCelo: boolean = false) => {
   it('reverts if any amount is 0', async () => {
     const holders = [wallet.address, wallet.address, wallet.address];
     const amounts = ['0', amount, amount];
+    const unlockDate = await getBlockTimePlusSeconds(10);
     const unlockDates = [unlockDate, unlockDate, unlockDate];
     await expect(batch.batchMint(nft.address, holders, token.address, amounts, unlockDates)).to.be.revertedWith(
       'cant mint with 0'
@@ -105,6 +107,7 @@ export default (isCelo: boolean = false) => {
   it('reverts if any date is in the past', async () => {
     const holders = [wallet.address, wallet.address, wallet.address];
     const amounts = [amount, amount, amount];
+    const unlockDate = await getBlockTimePlusSeconds(10);
     const unlockDates = [unlockDate, unlockDate, '0'];
     await expect(batch.batchMint(nft.address, holders, token.address, amounts, unlockDates)).to.be.revertedWith(
       'must be in the future'
@@ -113,6 +116,7 @@ export default (isCelo: boolean = false) => {
   it('reverts if the wallet has insufficient balances', async () => {
     const holders = [wallet.address, wallet.address, wallet.address];
     const amounts = [amount, amount, Constants.E18_10000];
+    const unlockDate = await getBlockTimePlusSeconds(10);
     const unlockDates = [unlockDate, unlockDate, unlockDate];
     await expect(batch.batchMint(nft.address, holders, token.address, amounts, unlockDates)).to.be.revertedWith(
       'THL01'

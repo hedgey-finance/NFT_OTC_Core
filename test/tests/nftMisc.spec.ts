@@ -8,7 +8,6 @@ import { createdNFTFixture } from '../fixtures';
 
 export default (isCelo: boolean = false) => {
   const provider = new MockProvider();
-  const [wallet] = provider.getWallets();
 
   let nft: Contract;
   let weth: WETH9;
