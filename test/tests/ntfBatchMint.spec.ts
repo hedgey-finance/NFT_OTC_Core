@@ -1,26 +1,32 @@
 import { expect } from 'chai';
-import { WETH9 } from '@thenextblock/hardhat-weth';
 import { inTenSeconds } from '../helpers';
 import * as Constants from '../constants';
 import { newNFTFixture } from '../fixtures';
-import { constants } from 'buffer';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { Contract } from 'ethers';
 
 export default (isCelo: boolean = false) => {
   let unlockDate: string;
 
   const amount = Constants.E18_1;
+  let token: Contract;
+  let nft: Contract;
+  let wallet: SignerWithAddress;
+  let walletA: SignerWithAddress;
+  let walletB: SignerWithAddress;
+  let batch: Contract;
 
   beforeEach(async () => {
     unlockDate = inTenSeconds();
+    const fixture = await newNFTFixture(isCelo);
+    token = fixture.token;
+    nft = fixture.nft;
+    wallet = fixture.owner;
+    walletA = fixture.walletA;
+    walletB = fixture.walletB;
+    batch = fixture.batch;
   });
   it('creates a batch mint of 10 NFTs', async () => {
-    const fixture = await newNFTFixture(isCelo);
-    const token = fixture.token;
-    const nft = fixture.nft;
-    const wallet = fixture.owner;
-    const walletA = fixture.walletA;
-    const walletB = fixture.walletB;
-    const batch = fixture.batch;
     const holders = [
       wallet.address,
       wallet.address,
@@ -78,5 +84,38 @@ export default (isCelo: boolean = false) => {
       .withArgs('9', walletB.address, amount, token.address, unlockDate)
       .to.emit(nft, 'NFTCreated')
       .withArgs('10', walletB.address, Constants.E18_10, token.address, unlockDate);
+  });
+
+  it('reverts if the sizes of arrays are different', async () => {
+    const holders = [wallet.address, walletA.address];
+    const amounts = [amount, amount, amount];
+    const unlockDates = [unlockDate, unlockDate, unlockDate];
+    await expect(batch.batchMint(nft.address, holders, token.address, amounts, unlockDates)).to.be.revertedWith(
+      'array size wrong'
+    );
+  });
+  it('reverts if any amount is 0', async () => {
+    const holders = [wallet.address, wallet.address, wallet.address];
+    const amounts = ['0', amount, amount];
+    const unlockDates = [unlockDate, unlockDate, unlockDate];
+    await expect(batch.batchMint(nft.address, holders, token.address, amounts, unlockDates)).to.be.revertedWith(
+      'cant mint with 0'
+    );
+  });
+  it('reverts if any date is in the past', async () => {
+    const holders = [wallet.address, wallet.address, wallet.address];
+    const amounts = [amount, amount, amount];
+    const unlockDates = [unlockDate, unlockDate, '0'];
+    await expect(batch.batchMint(nft.address, holders, token.address, amounts, unlockDates)).to.be.revertedWith(
+      'must be in the future'
+    );
+  });
+  it('reverts if the wallet has insufficient balances', async () => {
+    const holders = [wallet.address, wallet.address, wallet.address];
+    const amounts = [amount, amount, Constants.E18_10000];
+    const unlockDates = [unlockDate, unlockDate, unlockDate];
+    await expect(batch.batchMint(nft.address, holders, token.address, amounts, unlockDates)).to.be.revertedWith(
+      'THL01'
+    );
   });
 };
