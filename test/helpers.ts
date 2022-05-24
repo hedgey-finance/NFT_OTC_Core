@@ -1,16 +1,11 @@
 import { ZERO_ADDRESS, OTC_DEFAULTS } from './constants';
+import { ethers } from 'hardhat';
 
-export const inFiveSeconds = (): string => {
-  return (Math.round(Date.now() / 1000) + 5).toString();
-};
-
-export const inSixSeconds = (): string => {
-  return (Math.round(Date.now() / 1000) + 6).toString();
-};
-
-export const inTenSeconds = (): string => {
-  return (Math.round(Date.now() / 1000) + 100).toString();
-};
+export const getBlockTimePlusSeconds = async (seconds: number): Promise<string> => {
+  const blockNumber = await ethers.provider.getBlockNumber();
+    const block = await ethers.provider.getBlock(blockNumber);
+    return (block.timestamp + seconds).toString();
+}
 
 export interface IIndexable {
   [key: string]: any;
