@@ -4,6 +4,14 @@ export const inFiveSeconds = (): string => {
   return (Math.round(Date.now() / 1000) + 5).toString();
 };
 
+export const inSixSeconds = (): string => {
+  return (Math.round(Date.now() / 1000) + 6).toString();
+};
+
+export const inTenSeconds = (): string => {
+  return (Math.round(Date.now() / 1000) + 100).toString();
+};
+
 export interface IIndexable {
   [key: string]: any;
 }

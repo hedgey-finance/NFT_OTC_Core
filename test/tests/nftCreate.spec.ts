@@ -1,26 +1,25 @@
 import { expect } from 'chai';
-import { MockProvider } from 'ethereum-waffle';
-
-import { inFiveSeconds } from '../helpers';
+import { WETH9 } from '@thenextblock/hardhat-weth';
+import { inTenSeconds } from '../helpers';
 import * as Constants from '../constants';
 import { newNFTFixture } from '../fixtures';
+import { constants } from 'buffer';
 
 export default (isCelo: boolean = false) => {
-  const provider = new MockProvider();
-  const [wallet] = provider.getWallets();
-
   let unlockDate: string;
 
   const amount = Constants.E18_1;
 
   beforeEach(async () => {
-    unlockDate = inFiveSeconds();
+    unlockDate = inTenSeconds();
   });
 
   it('create an NFT', async () => {
-    const fixture = await newNFTFixture(provider, [wallet], isCelo);
+    //let unlockDate = (Math.round(Date.now() / 1000) + 10).toString()
+    const fixture = await newNFTFixture(isCelo);
     const token = fixture.token;
     const nft = fixture.nft;
+    const wallet = fixture.owner;
 
     //pre balance check
     expect(await token.balanceOf(nft.address)).to.eq('0');
@@ -41,42 +40,47 @@ export default (isCelo: boolean = false) => {
   });
 
   it('reverts if the amount == 0', async () => {
-    const fixture = await newNFTFixture(provider, [wallet], isCelo);
+    const fixture = await newNFTFixture(isCelo);
     const token = fixture.token;
     const nft = fixture.nft;
+    const wallet = fixture.owner;
 
     await expect(nft.createNFT(wallet.address, '0', token.address, unlockDate)).to.be.revertedWith('NFT01');
   });
 
   it('reverts if the token == zero address', async () => {
-    const fixture = await newNFTFixture(provider, [wallet], isCelo);
+    const fixture = await newNFTFixture(isCelo);
     const nft = fixture.nft;
+    const wallet = fixture.owner;
 
     await expect(nft.createNFT(wallet.address, amount, Constants.ZERO_ADDRESS, unlockDate)).to.be.revertedWith('NFT01');
   });
 
   it('reverts if the unlockDate is less than now', async () => {
-    const fixture = await newNFTFixture(provider, [wallet], isCelo);
+    const fixture = await newNFTFixture(isCelo);
     const token = fixture.token;
     const nft = fixture.nft;
+    const wallet = fixture.owner;
 
     await expect(nft.createNFT(wallet.address, amount, token.address, '0')).to.be.revertedWith('NFT01');
   });
 
   it('reverts if my wallet has insufficient balance', async () => {
-    const fixture = await newNFTFixture(provider, [wallet], isCelo);
+    const fixture = await newNFTFixture(isCelo);
     const token = fixture.token;
     const nft = fixture.nft;
-
-    await expect(nft.createNFT(wallet.address, Constants.E18_1000, token.address, unlockDate)).to.be.revertedWith(
+    const wallet = fixture.owner;
+    await token.approve(nft.address, Constants.E18_10000);
+    await expect(nft.createNFT(wallet.address, Constants.E18_10000, token.address, unlockDate)).to.be.revertedWith(
       'THL01'
     );
   });
 
   it('reverts if the tokens sent do not match the amount received', async () => {
-    const fixture = await newNFTFixture(provider, [wallet], isCelo);
+    const fixture = await newNFTFixture(isCelo);
     const nft = fixture.nft;
     const burn = fixture.burn;
+    const wallet = fixture.owner;
 
     expect(nft.createNFT(wallet.address, amount, burn.address, unlockDate)).to.be.revertedWith('THL02');
   });

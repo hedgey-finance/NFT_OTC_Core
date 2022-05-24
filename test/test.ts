@@ -14,6 +14,7 @@ import nftMiscTests from './tests/nftMisc.spec';
 import nftRedeemTests from './tests/nftRedeem.spec';
 import nftCreateTests from './tests/nftCreate.spec';
 import nftTransferTests from './tests/nftTransfer.spec';
+import nftBatchMintTests from './tests/ntfBatchMint.spec';
 
 describe('Hedgey OTC Library', async () => {
   const provider = new MockProvider();
@@ -96,6 +97,8 @@ describe('Hedgey OTC Library', async () => {
 
     describe('Creating', () => nftCreateTests(false));
 
+    describe('Batch Minting', () => nftBatchMintTests(false));
+
     describe('Redeeming - Token', () => nftRedeemTests);
     describe('Redeeming - Weth', () => {
       nftRedeemTests(true);
@@ -114,6 +117,8 @@ describe('Hedgey OTC Library', async () => {
     describe('URI & Name', () => nftMiscTests(true));
 
     describe('Creating', () => nftCreateTests(true));
+
+    describe('Batch Minting', () => nftBatchMintTests(true));
 
     describe('Redeeming - Token', () => {
       nftRedeemTests(false, true);

@@ -1,28 +1,35 @@
 import { expect } from 'chai';
-import { MockProvider } from 'ethereum-waffle';
+import { WETH9 } from '@thenextblock/hardhat-weth';
+import { Contract } from 'ethers';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
-import { inFiveSeconds } from '../helpers';
+import { inSixSeconds, inTenSeconds } from '../helpers';
 import * as Constants from '../constants';
 import { createdNFTFixture } from '../fixtures';
+import { Sign } from 'crypto';
 
 export default (isWeth: boolean, isCelo: boolean = false) => {
-  const provider = new MockProvider();
-  const [wallet, other] = provider.getWallets();
-
   const amount = Constants.E18_1;
   let unlockDate: string;
+  let token: Contract;
+  let nft: Contract;
+  let weth: WETH9;
+  let asset: WETH9 | Contract;
+  let wallet: SignerWithAddress;
+  let other: SignerWithAddress;
 
   beforeEach(async () => {
-    unlockDate = inFiveSeconds();
+    unlockDate = inSixSeconds();
+    const fixture = await createdNFTFixture(isWeth, amount, unlockDate, isCelo);
+    nft = fixture.nft;
+    weth = fixture.weth;
+    token = fixture.token;
+    asset = isWeth ? weth : token;
+    wallet = fixture.owner;
+    other = fixture.walletA;
   });
 
   it('wallet transfers to other & other redeems', async () => {
-    const fixture = await createdNFTFixture(provider, [wallet], isWeth, wallet, amount, unlockDate, isCelo);
-    const nft = fixture.nft;
-    const weth = fixture.weth;
-    const token = fixture.token;
-    const asset = isWeth ? weth : token;
-
     expect(await nft.transferFrom(wallet.address, other.address, '1'))
       .to.emit(nft, 'Transfer')
       .withArgs(wallet.address, other.address, '1');
@@ -42,12 +49,6 @@ export default (isWeth: boolean, isCelo: boolean = false) => {
   });
 
   it('wallet approves other to transferFrom & other redeems', async () => {
-    const fixture = await createdNFTFixture(provider, [wallet], isWeth, wallet, amount, unlockDate, isCelo);
-    const nft = fixture.nft;
-    const weth = fixture.weth;
-    const token = fixture.token;
-    const asset = isWeth ? weth : token;
-
     //check there is no approvals before
     expect(await nft.getApproved('1')).to.eq(Constants.ZERO_ADDRESS);
     expect(await nft.approve(other.address, '1'))
@@ -74,18 +75,12 @@ export default (isWeth: boolean, isCelo: boolean = false) => {
   });
 
   it('reverts if the approver is not the owner', async () => {
-    const fixture = await createdNFTFixture(provider, [wallet], isWeth, wallet, amount, unlockDate, isCelo);
-    const nft = fixture.nft;
-
     await expect(nft.connect(other).approve(other.address, '1')).to.be.revertedWith(
       'ERC721: approve caller is not owner nor approved for all'
     );
   });
 
   it('reverts if the wallet tries to approve itself', async () => {
-    const fixture = await createdNFTFixture(provider, [wallet], isWeth, wallet, amount, unlockDate, isCelo);
-    const nft = fixture.nft;
-
     await expect(nft.approve(wallet.address, '1')).to.be.revertedWith('ERC721: approval to current owner');
   });
 };

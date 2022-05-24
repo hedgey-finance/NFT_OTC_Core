@@ -17,15 +17,21 @@ import { ethers } from 'hardhat';
 
 interface NewNFTFixture {
   nft: Contract;
+  batch: Contract;
   token: Contract;
   weth: WETH9;
   burn: Contract;
+  owner: SignerWithAddress;
+  walletA: SignerWithAddress;
+  walletB: SignerWithAddress;
 }
 
 interface CreatedNFTFixture {
   nft: Contract;
   token: Contract;
   weth: WETH9;
+  owner: SignerWithAddress;
+  walletA: SignerWithAddress;
 }
 
 interface TokenFixtureConfig {
@@ -64,17 +70,7 @@ export async function wethFixture(_: Web3Provider, [wallet]: Wallet[]): Promise<
   return weth;
 }
 
-export async function nftFixture(
-  provider: Web3Provider,
-  [wallet]: Wallet[],
-  isCelo: boolean = false
-): Promise<Contract> {
-  const weth = await wethFixture(provider, [wallet]);
-  const nft = isCelo
-    ? await deployContract(wallet, CeloNFT, [''])
-    : await deployContract(wallet, NFT, [weth.address, '']);
-  return nft;
-}
+
 
 interface OTCProps {
   isCelo?: boolean;
@@ -212,49 +208,65 @@ export async function generateDealFixture({
   return { ...returnValues, otc, owner, buyer, other };
 }
 
+export async function nftFixture(
+  isCelo: boolean = false
+): Promise<Contract> {
+  const wallets = await ethers.getSigners();
+  const [owner] = wallets;
+  const weth = await deployWeth(owner);
+  const NFT = await ethers.getContractFactory(isCelo ? 'CeloHedgeys' : 'Hedgeys');
+  const baseUrl = Constants.nftBaseUrl;
+  const nft = isCelo ? await NFT.deploy(baseUrl) : await NFT.deploy(weth.address, baseUrl);
+  return nft;
+}
+
 export async function newNFTFixture(
-  provider: Web3Provider,
-  [wallet]: Wallet[],
   isCelo: boolean = false
 ): Promise<NewNFTFixture> {
-  const weth = await wethFixture(provider, [wallet]);
-  const token = await tokenFixture(provider, [wallet]);
-  const nft = isCelo
-    ? await deployContract(wallet, CeloNFT, [''])
-    : await deployContract(wallet, NFT, [weth.address, '']);
+  const wallets = await ethers.getSigners();
+  const [owner, walletA, walletB] = wallets;
+  const nft = await nftFixture(isCelo);
+  const Batch = await ethers.getContractFactory('BatchNFTMinter');
+  const batch = await Batch.deploy();
+  const Token = await ethers.getContractFactory('Token');
+  const token = await Token.deploy(Constants.E18_1000, 18);
   await token.approve(nft.address, Constants.E18_100);
-
-  const burn = await burnTokenFixture(provider, [wallet]);
+  await token.approve(batch.address, Constants.E18_100);
+  const weth = await deployWeth(owner);
+  const BurnToken = await ethers.getContractFactory('BurnToken');
+  const burn = await BurnToken.deploy('BURN', 'BURN');
+  await burn.deployed();
+  await burn.mint(Constants.E18_100);
   await burn.approve(nft.address, Constants.E18_100);
 
-  return { nft, token, weth, burn };
+  return { nft, batch, token, weth, burn, owner, walletA, walletB };
 }
 
 export async function createdNFTFixture(
-  provider: Web3Provider,
-  [wallet]: Wallet[],
   isWeth: boolean,
-  holder: Wallet,
   amount: string,
   unlockDate: string,
   isCelo: boolean = false
 ): Promise<CreatedNFTFixture> {
-  const weth = await wethFixture(provider, [wallet]);
-  const token = await tokenFixture(provider, [wallet]);
-  const nft = isCelo
-    ? await deployContract(wallet, CeloNFT, [''])
-    : await deployContract(wallet, NFT, [weth.address, '']);
+  const wallets = await ethers.getSigners();
+  const [owner, walletA, walletB] = wallets;
+  const weth = await deployWeth(owner);
+  const Token = await ethers.getContractFactory('Token');
+  const token = await Token.deploy(Constants.E18_1000, 18);
+  const NFT = await ethers.getContractFactory(isCelo ? 'CeloHedgeys' : 'Hedgeys');
+  const baseUrl = Constants.nftBaseUrl;
+  const nft = isCelo ? await NFT.deploy(baseUrl) : await NFT.deploy(weth.address, baseUrl);
 
   //generates an existing NFT Futures position at index 1
   if (isWeth) {
     //need to get myself weth first
     await weth.deposit({ value: Constants.E18_100 });
     await weth.approve(nft.address, Constants.E18_100);
-    await nft.createNFT(holder.address, amount, weth.address, unlockDate);
+    await nft.createNFT(owner.address, amount, weth.address, unlockDate);
   } else {
     await token.approve(nft.address, Constants.E18_100);
-    await nft.createNFT(holder.address, amount, token.address, unlockDate);
+    await nft.createNFT(owner.address, amount, token.address, unlockDate);
   }
 
-  return { nft, token, weth };
+  return { nft, token, weth, owner, walletA };
 }

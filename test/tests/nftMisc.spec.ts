@@ -15,15 +15,7 @@ export default (isCelo: boolean = false) => {
   let uri = 'hello/';
 
   it('updates the baseURI', async () => {
-    const fixture = await createdNFTFixture(
-      provider,
-      [wallet],
-      false,
-      wallet,
-      Constants.E18_1,
-      Constants.IN_ONE_HOUR,
-      isCelo
-    );
+    const fixture = await createdNFTFixture(false, Constants.E18_1, Constants.IN_ONE_HOUR, isCelo);
     nft = fixture.nft;
     weth = fixture.weth;
     await nft.updateBaseURI(uri);

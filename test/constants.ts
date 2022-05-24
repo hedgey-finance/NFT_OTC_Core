@@ -19,6 +19,7 @@ export const E18_10 = BigNumber.from(10).pow(18).mul(10).toString(); // 10e18
 export const E18_50 = BigNumber.from(10).pow(18).mul(50).toString(); // 50e18
 export const E18_100 = BigNumber.from(10).pow(18).mul(100).toString(); // 100e18
 export const E18_1000 = BigNumber.from(10).pow(18).mul(1000).toString(); // 1000e18
+export const E18_10000 = BigNumber.from(10).pow(18).mul(10000).toString(); // 1000e18
 
 export const E9_1 = BigNumber.from(10).pow(9).toString(); // 1e9
 

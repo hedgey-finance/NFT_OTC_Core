@@ -1,17 +1,14 @@
 import { WETH9 } from '@thenextblock/hardhat-weth';
 import { expect } from 'chai';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
-import { MockProvider } from 'ethereum-waffle';
 import { Contract } from 'ethers';
 
-import { inFiveSeconds } from '../helpers';
+import { inSixSeconds, inTenSeconds } from '../helpers';
 import * as Constants from '../constants';
 import { createdNFTFixture } from '../fixtures';
 
 export default (isWeth: boolean = false, isCelo: boolean = false) => {
-  const provider = new MockProvider();
-  const [wallet, other] = provider.getWallets();
-
   const amount = Constants.E18_1;
 
   let unlockDate: string;
@@ -19,20 +16,24 @@ export default (isWeth: boolean = false, isCelo: boolean = false) => {
   let nft: Contract;
   let weth: WETH9;
   let asset: WETH9 | Contract;
+  let wallet: SignerWithAddress;
+  let other: SignerWithAddress;
 
   beforeEach(async () => {
-    unlockDate = inFiveSeconds();
+    unlockDate = inSixSeconds();
 
-    const fixture = await createdNFTFixture(provider, [wallet], isWeth, wallet, amount, unlockDate, isCelo);
+    const fixture = await createdNFTFixture(isWeth, amount, unlockDate, isCelo);
     token = fixture.token;
     nft = fixture.nft;
     weth = fixture.weth;
     asset = isWeth ? weth : token;
-
+    wallet = fixture.owner;
+    other = fixture.walletA;
     expect(await asset.balanceOf(nft.address)).to.eq(amount);
   });
 
   it('redeem future', async () => {
+    expect(await asset.balanceOf(nft.address)).to.eq(amount);
     //gotta wait 6 seconds for it to be redeemable;
     await new Promise((resolve) => setTimeout(resolve, 6000));
 
