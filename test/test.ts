@@ -93,9 +93,9 @@ describe('Hedgey OTC Library', async () => {
   });
 
   describe('NFT Contract', () => {
-    describe('URI & Name', () => nftMiscTests(false));
+   describe('URI & Name', () => nftMiscTests(false));
 
-    describe('Creating', () => nftCreateTests(false));
+   describe('Creating', () => nftCreateTests(false));
 
     describe('Batch Minting', () => nftBatchMintTests(false));
 
