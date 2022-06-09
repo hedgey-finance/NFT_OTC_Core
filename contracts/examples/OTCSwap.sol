@@ -58,13 +58,14 @@ contract OTCSwap is ReentrancyGuard {
     uint256 maturity;
     uint256 unlockBuyDate;
     uint256 unlockSellDate;
-    bool isWhitelist;
+    mapping(address => bool) buyers;
+    bool isWhiteList;
   }
 
   /// @dev the Deals are all mapped via the indexer d to deals mapping
   mapping(uint256 => Deal) public deals;
   /// @dev maps the deal index to an address that is whitelisted
-  mapping(uint256 => mapping(address => bool)) private whiteListedBuyers;
+  //mapping(uint256 => mapping(address => bool)) private whiteListedBuyers;
 
   receive() external payable {}
 
@@ -109,54 +110,71 @@ contract OTCSwap is ReentrancyGuard {
     require((_min * _price) / (10**Decimals(_token).decimals()) > 0, 'OTC03');
     /// @dev pulls the tokens into this contract so that they can be purchased. If ETH is being used, it will pull ETH and wrap and receive WETH into this contract
     TransferHelper.transferPayment(weth, _token, payable(msg.sender), payable(address(this)), _amount);
+    d++;
+    uint256 dealId = d;
+    Deal storage newDeal = deals[dealId];
+    newDeal.seller = msg.sender;
+    newDeal.token = _token;
+    newDeal.paymentCurrency = _paymentCurrency;
+    newDeal.remainingAmount = _amount;
+    newDeal.minimumPurchase = _min;
+    newDeal.maxPurchase = _max;
+    newDeal.price = _price;
+    newDeal.maturity = _maturity;
+    newDeal.unlockBuyDate = _unlockBuyDate;
+    newDeal.unlockSellDate = _unlockSellDate;
     /// @dev sets the whitelist
-    _addBuyersToWhitelist(d, _buyers);
-    bool _isWhitelist;
     if (_buyers.length > 0) {
       /// @dev sets the whitelist
-      _addBuyersToWhitelist(d, _buyers);
-      _isWhitelist = true;
+      newDeal.isWhiteList = true;
+      for (uint256 i = 0; i < _buyers.length; i++) {
+        newDeal.buyers[_buyers[i]] = true;
+      }
     } else {
-      _isWhitelist = false;
+      newDeal.isWhiteList = false;
     }
-    /// @dev creates the Deal struct with all of the parameters for inputs
-    deals[d++] = Deal(msg.sender, _token, _paymentCurrency, _amount, _min, _max, _price, _maturity, _unlockBuyDate, _unlockSellDate, _isWhitelist);
     /// @dev emit an event with the parameters of the deal, because counter d has already been increased by 1, need to subtract one when emitting the event
-    emit NewDeal(d - 1, msg.sender, _token, _paymentCurrency, _amount, _min, _max, _price, _maturity, _unlockBuyDate, _unlockSellDate, _isWhitelist);
+    emit NewDeal(d, msg.sender, _token, _paymentCurrency, _amount, _min, _max, _price, _maturity, _unlockBuyDate, _unlockSellDate, newDeal.isWhiteList);
+    emit BuyersWhitelisted(d, _buyers);
   }
 
-  function _addBuyersToWhitelist(uint256 _d, address[] memory _buyers) internal {
-    for (uint256 i = 0; i < _buyers.length; i++) {
-      /// @dev maps the index of the deal with the buyer address to true
-      whiteListedBuyers[_d][_buyers[i]] = true;
-    }
-  }
-  function _removeBuyersToWhitelist(uint256 _d, address[] memory _buyers) internal {
-    for (uint256 i = 0; i < _buyers.length; i++) {
-      /// @dev maps the index of the deal with the buyer address to true
-      whiteListedBuyers[_d][_buyers[i]] = false;
-    }
-  }
 
   function addBuyersToWhitelist(uint256 _d, address[] memory _buyers) external {
     /// @dev grabs from storage the deal, and temporarily stores in memory
-    Deal memory deal = deals[_d];
+    Deal storage deal = deals[_d];
     /// @dev only the seller can call this function
     require(msg.sender == deal.seller, 'OTC04');
-    deal.isWhitelist = true;
+    deal.isWhiteList = true;
     /// @dev adds the additional buyers to the whitelist
-    _addBuyersToWhitelist(_d, _buyers);
+    for (uint256 i = 0; i < _buyers.length; i++) {
+        deal.buyers[_buyers[i]] = true;
+    }
+    emit BuyersWhitelisted(_d, _buyers);
   }
 
-  function removeBuyersFromWhitelist(uint256 _d, address[] memory _buyers, bool _isWhitelist) external {
+  function removeAllBuyersFromWhitelist(uint256 _d, address[] memory _buyers, bool _isWhitelist) external {
     /// @dev grabs from storage the deal, and temporarily stores in memory
-    Deal memory deal = deals[_d];
+    Deal storage deal = deals[_d];
     /// @dev only the seller can call this function
     require(msg.sender == deal.seller, 'OTC04');
     /// @dev can set this to false if they want to just remove everyone without putting in the addresses
-    deal.isWhitelist = _isWhitelist;
+    deal.isWhiteList = _isWhitelist;
     /// @dev remove the buyers from the whitelist
-    _removeBuyersToWhitelist(_d, _buyers);
+    if (_isWhitelist) {
+       for (uint256 i = 0; i < _buyers.length; i++) {
+        deal.buyers[_buyers[i]] = false;
+      }
+    }
+    emit BuyersUnWhitelisted(_d, _buyers);
+  }
+
+  function canPurchase(uint256 _d, address buyer) public view returns (bool) {
+    Deal storage deal = deals[_d];
+    if(deal.buyers[buyer] || !deal.isWhiteList) {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   /**
@@ -169,7 +187,7 @@ contract OTCSwap is ReentrancyGuard {
    */
   function close(uint256 _d) external nonReentrant {
     /// @dev grabs from storage the deal, and temporarily stores in memory
-    Deal memory deal = deals[_d];
+    Deal storage deal = deals[_d];
     /// @dev only the seller can call this function
     require(msg.sender == deal.seller, 'OTC04');
     /// @dev the remaining amount must be greater than 0
@@ -196,13 +214,13 @@ contract OTCSwap is ReentrancyGuard {
    */
   function buy(uint256 _d, uint256 _amount) external payable nonReentrant {
     /// @dev pull the deal details from storage, placed in memory
-    Deal memory deal = deals[_d];
+    Deal storage deal = deals[_d];
     /// @dev we do not let the seller sell to themselves, must be a separate buyer
     require(msg.sender != deal.seller, 'OTC06');
     /// @dev require that the deal order is still valid by checking if the block time is not passed the maturity date
     require(deal.maturity >= block.timestamp, 'OTC07');
     /// @dev if the deal had a whitelist - then require the msg.sender to be in that whitelist, otherwise if there was no whitelist, anyone can buy
-    require(whiteListedBuyers[_d][msg.sender] || !deal.isWhitelist, 'OTC08');
+    require(canPurchase(_d, msg.sender), 'OTC08');
     /// @dev require that the amount being purchased is greater than the deal minimum, or that the amount being purchased is the entire remainder of whats left
     /// @dev AND require that the remaining amount in the deal actually equals or exceeds what the buyer wants to purchase
     require(
@@ -263,6 +281,8 @@ contract OTCSwap is ReentrancyGuard {
     uint256 _unlockSellDate,
     bool _isWhitelist
   );
+  event BuyersWhitelisted(uint256 _d, address[] _buyers);
+  event BuyersUnWhitelisted(uint256 _c, address[] _buyers);
   event TokensBought(uint256 _d, address _seller, uint256 _amount, uint256 _remainingAmount);
   event DealClosed(uint256 _d);
   event FutureCreated(address _seller, address _owner, address _token, uint256 _amount, uint256 _unlockDate);

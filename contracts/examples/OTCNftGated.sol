@@ -57,7 +57,7 @@ contract OTCNftGated is ReentrancyGuard {
     uint256 price;
     uint256 maturity;
     uint256 unlockDate;
-    address nftGate;
+    address[] nfts;
   }
 
   /// @dev the Deals are all mapped via the indexer d to deals mapping
@@ -82,7 +82,7 @@ contract OTCNftGated is ReentrancyGuard {
    * @param _unlockDate is used if you are requiring that tokens purchased by buyers are locked. If this is set to 0 or anything less than current block time
    * ... any tokens purchased will not be locked but immediately delivered to the buyers. Otherwise the unlockDate will lock the tokens in the associated
    * ... futureContract and mint the buyer an NFT - which will hold the tokens in escrow until the unlockDate has passed - whereupon the owner of the NFT can redeem the tokens
-   * @param _nftGate is a special option to make this deal require that the buyers hold a specific other NFT to participate in the buy
+   * @param _nfts is a special option to make this deal require that the buyers hold a specific other NFT to participate in the buy
    */
   function createNFTGatedDeal(
     address _token,
@@ -92,7 +92,7 @@ contract OTCNftGated is ReentrancyGuard {
     uint256 _price,
     uint256 _maturity,
     uint256 _unlockDate,
-    address _nftGate
+    address[] memory _nfts
   ) external payable nonReentrant {
     /// @dev check to make sure that the maturity is beyond current block time
     require(_maturity > block.timestamp, 'OTC01');
@@ -102,11 +102,11 @@ contract OTCNftGated is ReentrancyGuard {
     /// @dev where someone could find a small enough minimum to purchase all of the tokens for free.
     require((_min * _price) / (10**Decimals(_token).decimals()) > 0, 'OTC03');
     /// @dev creates the Deal struct with all of the parameters for inputs - and set the bool 'open' to true so that this offer can now be purchased
-    deals[d++] = Deal(msg.sender, _token, _paymentCurrency, _amount, _min, _price, _maturity, _unlockDate, _nftGate);
+    deals[d++] = Deal(msg.sender, _token, _paymentCurrency, _amount, _min, _price, _maturity, _unlockDate, _nfts);
     /// @dev pulls the tokens into this contract so that they can be purchased. If ETH is being used, it will pull ETH and wrap and receive WETH into this contract
     TransferHelper.transferPayment(weth, _token, payable(msg.sender), payable(address(this)), _amount);
     /// @dev emit an event with the parameters of the deal, because counter d has already been increased by 1, need to subtract one when emitting the event
-    emit NewNFTGatedDeal(d - 1, msg.sender, _token, _paymentCurrency, _amount, _min, _price, _maturity, _unlockDate, _nftGate);
+    emit NewNFTGatedDeal(d - 1, msg.sender, _token, _paymentCurrency, _amount, _min, _price, _maturity, _unlockDate, _nfts);
   }
 
   /**
@@ -132,6 +132,16 @@ contract OTCNftGated is ReentrancyGuard {
     emit DealClosed(_d);
   }
 
+  function isNFTOwner(uint256 _d, address buyer) public view returns (bool canBuy) {
+    Deal memory deal = deals[_d];
+    canBuy = false;
+    for (uint256 i = 0; i < deal.nfts.length; i++) {
+      if (IERC721(deal.nfts[i]).balanceOf(buyer) > 0) {
+        canBuy = true;
+      }
+    }
+  }
+
   /**
    * @notice This function is what buyers use to make purchases from the sellers
    * @param _d is the index of the deal that a buyer wants to participate in and make a purchase
@@ -152,7 +162,7 @@ contract OTCNftGated is ReentrancyGuard {
     /// @dev require that the deal order is still valid by checking if the block time is not passed the maturity date
     require(deal.maturity >= block.timestamp, 'OTC07');
     /// @dev if the deal has a NFT ownership requirement, then we need to ensure the buyer owns an NFT
-    require(IERC721(deal.nftGate).balanceOf(msg.sender) > 0, 'OTC08');
+    require(isNFTOwner(_d, msg.sender), 'OTC08');
     /// @dev require that the amount being purchased is greater than the deal minimum, or that the amount being purchased is the entire remainder of whats left
     /// @dev AND require that the remaining amount in the deal actually equals or exceeds what the buyer wants to purchase
     require(
@@ -199,7 +209,7 @@ contract OTCNftGated is ReentrancyGuard {
     uint256 _price,
     uint256 _maturity,
     uint256 _unlockDate,
-    address _nftGate
+    address[] _nfts
   );
   event TokensBought(uint256 _d, uint256 _amount, uint256 _remainingAmount);
   event DealClosed(uint256 _d);
