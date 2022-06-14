@@ -5,7 +5,7 @@ import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import * as Constants from '../constants';
 
-describe.only('OTC NFT Gated Buy', () => {
+describe('OTC NFT Gated Buy', () => {
   let weth: WETH9;
   let owner: SignerWithAddress;
   let buyer: SignerWithAddress;
