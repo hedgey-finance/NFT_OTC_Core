@@ -5,6 +5,7 @@ import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import '../interfaces/Decimals.sol';
 import '../libraries/TransferHelper.sol';
 import '../libraries/NFTHelper.sol';
+import "@openzeppelin/contracts/utils/Counters.sol";
 
 /**
  * @title HedgeyOTC is an over the counter peer to peer trading contract
@@ -14,12 +15,12 @@ import '../libraries/NFTHelper.sol';
  * @notice The Seller also decides if the tokens being sold must be time locked - which means that there is a vesting period before the buyers can access those tokens
  */
 contract OTCSwap is ReentrancyGuard {
+  using Counters for Counters.Counter;
+  Counters.Counter private dealCounter;
 
-  /// @dev we set the WETH address so that we can wrap and unwrap ETH sending to and from the smart contract
-  /// @dev the smart contract always stores WETH, but receives and delivers ETH to and from users
   address payable public weth;
   /// @dev d is a basic counter, used for indexing all of the deals - and deals are mapped to each index d
-  uint256 public d = 0;
+  
   /// @dev the futureContract is used to time lock tokens. This contract points to one specific contract for time locking
   /// @dev the futureContract is an ERC721 contract that locks the tokens for users until they are unlocked and can be redeemed
   address public futureContract;
@@ -110,9 +111,7 @@ contract OTCSwap is ReentrancyGuard {
     require((_min * _price) / (10**Decimals(_token).decimals()) > 0, 'OTC03');
     /// @dev pulls the tokens into this contract so that they can be purchased. If ETH is being used, it will pull ETH and wrap and receive WETH into this contract
     TransferHelper.transferPayment(weth, _token, payable(msg.sender), payable(address(this)), _amount);
-    d++;
-    uint256 dealId = d;
-    Deal storage newDeal = deals[dealId];
+    Deal storage newDeal = deals[dealCounter.current()];
     newDeal.seller = msg.sender;
     newDeal.token = _token;
     newDeal.paymentCurrency = _paymentCurrency;
@@ -133,9 +132,9 @@ contract OTCSwap is ReentrancyGuard {
     } else {
       newDeal.isWhiteList = false;
     }
-    /// @dev emit an event with the parameters of the deal, because counter d has already been increased by 1, need to subtract one when emitting the event
-    emit NewDeal(d, msg.sender, _token, _paymentCurrency, _amount, _min, _max, _price, _maturity, _unlockBuyDate, _unlockSellDate, newDeal.isWhiteList);
-    emit BuyersWhitelisted(d, _buyers);
+    emit NewDeal(dealCounter.current(), msg.sender, _token, _paymentCurrency, _amount, _min, _max, _price, _maturity, _unlockBuyDate, _unlockSellDate, newDeal.isWhiteList);
+    emit BuyersWhitelisted(dealCounter.current(), _buyers);
+    dealCounter.increment();
   }
 
 
