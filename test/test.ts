@@ -16,6 +16,9 @@ import nftCreateTests from './tests/nftCreate.spec';
 import nftTransferTests from './tests/nftTransfer.spec';
 import nftBatchMintTests from './tests/ntfBatchMint.spec';
 
+import otcNftGatedConstructorTests from './tests/otcNftGatedConstructor.spec';
+import otcNftGatedCreateErrorsTests from './tests/otcNftGatedCreateErrors.spec';
+
 describe('Hedgey OTC Library', async () => {
   const provider = new MockProvider();
   const [, buyer] = provider.getWallets();
@@ -65,6 +68,11 @@ describe('Hedgey OTC Library', async () => {
     describe('Closing', otcCloseTests);
   });
 
+  describe('OTC NFT gated contract', () => {
+    describe('Constructor', otcNftGatedConstructorTests);
+    describe('Create Errors', otcNftGatedCreateErrorsTests);
+  });
+
   describe('Celo OTC Contract', () => {
     describe('Constructor', () => otcConstructorTests(true));
     describe('Create Errors', () => otcCreateErrorsTests(true));
@@ -93,9 +101,9 @@ describe('Hedgey OTC Library', async () => {
   });
 
   describe('NFT Contract', () => {
-   describe('URI & Name', () => nftMiscTests(false));
+    describe('URI & Name', () => nftMiscTests(false));
 
-   describe('Creating', () => nftCreateTests(false));
+    describe('Creating', () => nftCreateTests(false));
 
     describe('Batch Minting', () => nftBatchMintTests(false));
 
