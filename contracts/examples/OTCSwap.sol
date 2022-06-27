@@ -203,6 +203,8 @@ contract OTCSwap is ReentrancyGuard {
     require(deal.maturity >= block.timestamp, 'OTC07');
     /// @dev if the deal had a whitelist - then require the msg.sender to be in that whitelist, otherwise if there was no whitelist, anyone can buy
     require(whiteListedBuyers[_d][msg.sender] || !deal.isWhitelist, 'OTC08');
+    /// @dev remove the buyer from the whitelist - only one buy
+    whiteListedBuyers[_d][msg.sender] = false;
     /// @dev require that the amount being purchased is greater than the deal minimum, or that the amount being purchased is the entire remainder of whats left
     /// @dev AND require that the remaining amount in the deal actually equals or exceeds what the buyer wants to purchase
     require(
