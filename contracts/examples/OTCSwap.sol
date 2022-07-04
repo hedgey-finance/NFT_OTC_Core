@@ -7,9 +7,8 @@ import '../libraries/TransferHelper.sol';
 import '../libraries/NFTHelper.sol';
 
 /**
- * @title HedgeyOTC is an over the counter peer to peer trading contract
- * @notice This contract allows for a seller to generate a unique over the counter deal, which can be private or public
- * @notice The public deals allow anyone to participate and purchase tokens from the seller, whereas a private deal allows only a single whitelisted address to participate
+ * @title OTCSwap is an over the counter peer to peer trading contract
+ * @notice This contract allows for a seller to generate a unique over the counter deal
  * @notice The Seller decides how much tokens to sell and at what price
  * @notice The Seller also decides if the tokens being sold must be time locked - which means that there is a vesting period before the buyers can access those tokens
  */
@@ -19,33 +18,31 @@ contract OTCSwap is ReentrancyGuard {
   /// @dev the smart contract always stores WETH, but receives and delivers ETH to and from users
   address payable public weth;
   /// @dev d is a basic counter, used for indexing all of the deals - and deals are mapped to each index d
-  uint256 public d = 0;
+  uint256 public dealIndex = 0;
   /// @dev the futureContract is used to time lock tokens. This contract points to one specific contract for time locking
   /// @dev the futureContract is an ERC721 contract that locks the tokens for users until they are unlocked and can be redeemed
   address public futureContract;
 
-  constructor(address payable _weth, address _fc) {
+  constructor(address payable _weth, address _futureContract) {
     weth = _weth;
-    futureContract = _fc;
+    futureContract = _futureContract;
   }
 
   /**
-   * @notice Deal is the struct that defines a single OTC offer, created by a seller
-   * @dev  Deal struct contains the following parameter definitions:
-   * @dev 1) seller: This is the creator and seller of the deal
-   * @dev 2) token: This is the token that the seller is selling! Must be a standard ERC20 token, parameter is the contract address of the ERC20
-   * @dev ... the ERC20 contract is required to have a public call function decimals() that returns a uint. This is required to price the amount of tokens being purchase
-   * @dev ... by the buyer - calculating exactly how much to deliver to the seller.
-   * @dev 3) paymentCurrency: This is also an ERC20 which the seller will get paid in during the act of a buyer buying tokens - also the ERC20 contract address
-   * @dev 4) remainingAmount: This initially is the entire deposit the seller is selling, but as people purchase chunks of the deal, the remaining amount is decreased to 0
-   * @dev 5) minimumPurchase: This is the minimum chunk size that a buyer can purchase, defined by the seller, must be greater than 0.
-   * @dev 6) price: The Price is the per token cost which buyers pay to the seller, denominated in the payment currency. This is not the total price of the deal
-   * @dev ... the total price is calculated by the remainingAmount * price (then adjusting for the decimals of the payment currency)
-   * @dev 7) maturity: this is the unix time defining the period in which the deal is valid. After the maturity no purchases can be made.
-   * @dev 8) unlockDate: this is the unix time which may be used to time lock tokens that are sold. If the unlock date is 0 or less than current block time
-   * @dev ... at the time of purchase, the tokens are not locked but rather delivered directly to the buyer from the contract
-   * @dev 9) buyer: this is a whitelist address for the buyer. It can either be the Zero address - which indicates that Anyone can purchase
-   * @dev ... or it is a single address that only that owner of the address can participate in purchasing the tokens
+   * Deal is the struct that defines a single OTC offer, created by a seller
+   * @param seller This is the creator and seller of the deal
+   * @param token This is the token that the seller is selling, it must be a standard ERC20 token, parameter is the contract address of the ERC20
+   * the ERC20 contract is required to have a public call function decimals() that returns a uint. This is required to price the amount of tokens being purchase
+   * by the buyer - calculating exactly how much to deliver to the seller.
+   * @param paymentCurrency This is also an ERC20 which the seller will get paid in during the act of a buyer buying tokens - also the ERC20 contract address
+   * @param remainingAmount This initially is the entire deposit the seller is selling, but as people purchase chunks of the deal, the remaining amount is decreased to 0
+   * @param minimumPurchase: This is the minimum chunk size that a buyer can purchase, defined by the seller, must be greater than 0.
+   * @param price: The Price is the per token cost which buyers pay to the seller, denominated in the payment currency. This is not the total price of the deal
+   * the total price is calculated by the remainingAmount * price (then adjusting for the decimals of the payment currency).
+   * @param maturity this is the unix time defining the period in which the deal is valid. After the maturity no purchases can be made.
+   * @param unlockBuyDate
+   * @param unlockSellDate
+   * @param isWhitelist
    */
   struct Deal {
     address seller;
@@ -69,9 +66,9 @@ contract OTCSwap is ReentrancyGuard {
   receive() external payable {}
 
   /*
-   * @notice This function is what the seller uses to create a new OTC offering
-   * @notice Once this function has been completed - buyers can purchase tokens from the seller based on the price and parameters set
-   * @dev this function will pull in tokens from the seller, create a new Deal struct and mapped to the current index d
+   * This function is what the seller uses to create a new OTC offering
+   * Once this function has been completed - buyers can purchase tokens from the seller based on the price and parameters set
+   * this function will pull in tokens from the seller, create a new Deal struct and mapped to the current index d
    * @dev this function does not allow for taxed / deflationary tokens - as the amount that is pulled into the contract must match with what is being sent
    * @dev this function requires that the _token has a decimals() public function on its ERC20 contract to be called
    * @param _token is the ERC20 contract address that the seller is going to create the over the counter offering for
@@ -89,40 +86,40 @@ contract OTCSwap is ReentrancyGuard {
    * ... Zero address - then it is publicly available and anyone can purchase tokens from this deal
    */
   function create(
-    address _token,
-    address _paymentCurrency,
-    uint256 _amount,
-    uint256 _min,
-    uint256 _max,
-    uint256 _price,
-    uint256 _maturity,
-    uint256 _unlockBuyDate,
-    uint256 _unlockSellDate,
-    address[] memory _buyers
+    address token,
+    address paymentCurrency,
+    uint256 amount,
+    uint256 min,
+    uint256 max,
+    uint256 price,
+    uint256 maturity,
+    uint256 unlockBuyDate,
+    uint256 unlockSellDate,
+    address[] memory buyers
   ) external payable nonReentrant {
     /// @dev check to make sure that the maturity is beyond current block time
-    require(_maturity > block.timestamp, 'OTC01');
+    require(maturity > block.timestamp, 'OTC01');
     /// @dev check to make sure that the total amount is grater than or equal to the minimum
-    require(_amount >= _min, 'OTC02');
+    require(amount >= min, 'OTC02');
     /// @dev this checks to make sure that if someone purchases the minimum amount, it is never equal to 0
     /// @dev where someone could find a small enough minimum to purchase all of the tokens for free.
-    require((_min * _price) / (10**Decimals(_token).decimals()) > 0, 'OTC03');
+    require((min * price) / (10**Decimals(token).decimals()) > 0, 'OTC03');
     /// @dev pulls the tokens into this contract so that they can be purchased. If ETH is being used, it will pull ETH and wrap and receive WETH into this contract
-    TransferHelper.transferPayment(weth, _token, payable(msg.sender), payable(address(this)), _amount);
+    TransferHelper.transferPayment(weth, token, payable(msg.sender), payable(address(this)), amount);
     /// @dev sets the whitelist
-    _addBuyersToWhitelist(d, _buyers);
-    bool _isWhitelist;
-    if (_buyers.length > 0) {
+    _addBuyersToWhitelist(dealIndex, buyers);
+    bool isWhitelist;
+    if (buyers.length > 0) {
       /// @dev sets the whitelist
-      _addBuyersToWhitelist(d, _buyers);
-      _isWhitelist = true;
+      _addBuyersToWhitelist(dealIndex, buyers);
+      isWhitelist = true;
     } else {
-      _isWhitelist = false;
+      isWhitelist = false;
     }
     /// @dev creates the Deal struct with all of the parameters for inputs
-    deals[d++] = Deal(msg.sender, _token, _paymentCurrency, _amount, _min, _max, _price, _maturity, _unlockBuyDate, _unlockSellDate, _isWhitelist);
+    deals[dealIndex++] = Deal(msg.sender, token, paymentCurrency, amount, min, max, price, maturity, unlockBuyDate, unlockSellDate, isWhitelist);
     /// @dev emit an event with the parameters of the deal, because counter d has already been increased by 1, need to subtract one when emitting the event
-    emit NewDeal(d - 1, msg.sender, _token, _paymentCurrency, _amount, _min, _max, _price, _maturity, _unlockBuyDate, _unlockSellDate, _isWhitelist);
+    emit NewDeal(dealIndex - 1, msg.sender, token, paymentCurrency, amount, min, max, price, maturity, unlockBuyDate, unlockSellDate, isWhitelist);
   }
 
   function _addBuyersToWhitelist(uint256 _d, address[] memory _buyers) internal {
