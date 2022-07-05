@@ -2,6 +2,7 @@
 pragma solidity 0.8.13;
 
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
+import "@openzeppelin/contracts/utils/Counters.sol";
 import '../interfaces/Decimals.sol';
 import '../libraries/TransferHelper.sol';
 import '../libraries/NFTHelper.sol';
@@ -14,11 +15,13 @@ import '../libraries/NFTHelper.sol';
  */
 contract OTCSwap is ReentrancyGuard {
 
+  using Counters for Counters.Counter;
+
   /// @dev we set the WETH address so that we can wrap and unwrap ETH sending to and from the smart contract
   /// @dev the smart contract always stores WETH, but receives and delivers ETH to and from users
   address payable public weth;
   /// @dev d is a basic counter, used for indexing all of the deals - and deals are mapped to each index d
-  uint256 public dealIndex = 0;
+  Counters.Counter public dealIndex;
   /// @dev the futureContract is used to time lock tokens. This contract points to one specific contract for time locking
   /// @dev the futureContract is an ERC721 contract that locks the tokens for users until they are unlocked and can be redeemed
   address public futureContract;
@@ -82,8 +85,6 @@ contract OTCSwap is ReentrancyGuard {
    * @param _unlockBuyDate is used if you are requiring that tokens purchased by buyers are locked. If this is set to 0 or anything less than current block time
    * ... any tokens purchased will not be locked but immediately delivered to the buyers. Otherwise the unlockDate will lock the tokens in the associated
    * ... futureContract and mint the buyer an NFT - which will hold the tokens in escrow until the unlockDate has passed - whereupon the owner of the NFT can redeem the tokens
-   * @param _buyer is a special option to make this a private deal - where only a specific buyer's address can participate and make the purchase. If this is set to the
-   * ... Zero address - then it is publicly available and anyone can purchase tokens from this deal
    */
   function create(
     address token,
@@ -97,29 +98,20 @@ contract OTCSwap is ReentrancyGuard {
     uint256 unlockSellDate,
     address[] memory buyers
   ) external payable nonReentrant {
-    /// @dev check to make sure that the maturity is beyond current block time
     require(maturity > block.timestamp, 'OTC01');
-    /// @dev check to make sure that the total amount is grater than or equal to the minimum
     require(amount >= min, 'OTC02');
-    /// @dev this checks to make sure that if someone purchases the minimum amount, it is never equal to 0
-    /// @dev where someone could find a small enough minimum to purchase all of the tokens for free.
     require((min * price) / (10**Decimals(token).decimals()) > 0, 'OTC03');
-    /// @dev pulls the tokens into this contract so that they can be purchased. If ETH is being used, it will pull ETH and wrap and receive WETH into this contract
+
+    dealIndex.increment();
+    uint256 newItemId = dealIndex.current();
+
     TransferHelper.transferPayment(weth, token, payable(msg.sender), payable(address(this)), amount);
-    /// @dev sets the whitelist
-    _addBuyersToWhitelist(dealIndex, buyers);
-    bool isWhitelist;
-    if (buyers.length > 0) {
-      /// @dev sets the whitelist
-      _addBuyersToWhitelist(dealIndex, buyers);
-      isWhitelist = true;
-    } else {
-      isWhitelist = false;
+    bool isWhitelist = buyers.length > 0;
+    if (isWhitelist) {
+      _addBuyersToWhitelist(newItemId, buyers);
     }
-    /// @dev creates the Deal struct with all of the parameters for inputs
-    deals[dealIndex++] = Deal(msg.sender, token, paymentCurrency, amount, min, max, price, maturity, unlockBuyDate, unlockSellDate, isWhitelist);
-    /// @dev emit an event with the parameters of the deal, because counter d has already been increased by 1, need to subtract one when emitting the event
-    emit NewDeal(dealIndex - 1, msg.sender, token, paymentCurrency, amount, min, max, price, maturity, unlockBuyDate, unlockSellDate, isWhitelist);
+    deals[newItemId] = Deal(msg.sender, token, paymentCurrency, amount, min, max, price, maturity, unlockBuyDate, unlockSellDate, isWhitelist);
+    emit NewDeal(newItemId, msg.sender, token, paymentCurrency, amount, min, max, price, maturity, unlockBuyDate, unlockSellDate, isWhitelist);
   }
 
   function _addBuyersToWhitelist(uint256 _d, address[] memory _buyers) internal {
@@ -181,7 +173,7 @@ contract OTCSwap is ReentrancyGuard {
 
   /**
    * @notice This function is what buyers use to make purchases from the sellers
-   * @param _d is the index of the deal that a buyer wants to participate in and make a purchase
+   * @param _dealIndex is the index of the deal that a buyer wants to participate in and make a purchase
    * @param _amount is the amount of tokens the buyer is purchasing, which must be at least the minimumPurchase
    * ... and at most the remainingAmount for this deal (or the remainingAmount if that is less than the minimum)
    * @notice ensure when using this function that you are aware of the minimums, and price per token to ensure sufficient balances to make a purchase
@@ -191,17 +183,17 @@ contract OTCSwap is ReentrancyGuard {
    * @notice the Seller will receive payment in full immediately when triggering this function, there is no lock on payments
    * @dev this function can also be used to execute a token SWAP function, where the swap is executed through this function
    */
-  function buy(uint256 _d, uint256 _amount) external payable nonReentrant {
+  function buy(uint256 _dealIndex, uint256 _amount) external payable nonReentrant {
     /// @dev pull the deal details from storage, placed in memory
-    Deal memory deal = deals[_d];
+    Deal memory deal = deals[_dealIndex];
     /// @dev we do not let the seller sell to themselves, must be a separate buyer
     require(msg.sender != deal.seller, 'OTC06');
     /// @dev require that the deal order is still valid by checking if the block time is not passed the maturity date
     require(deal.maturity >= block.timestamp, 'OTC07');
     /// @dev if the deal had a whitelist - then require the msg.sender to be in that whitelist, otherwise if there was no whitelist, anyone can buy
-    require(whiteListedBuyers[_d][msg.sender] || !deal.isWhitelist, 'OTC08');
+    require(whiteListedBuyers[_dealIndex][msg.sender] || !deal.isWhitelist, 'OTC08');
     /// @dev remove the buyer from the whitelist - only one buy
-    whiteListedBuyers[_d][msg.sender] = false;
+    whiteListedBuyers[_dealIndex][msg.sender] = false;
     /// @dev require that the amount being purchased is greater than the deal minimum, or that the amount being purchased is the entire remainder of whats left
     /// @dev AND require that the remaining amount in the deal actually equals or exceeds what the buyer wants to purchase
     require(
@@ -216,7 +208,7 @@ contract OTCSwap is ReentrancyGuard {
     /// @dev reduce the deal remaining amount by how much was purchased
     deal.remainingAmount -= _amount;
     /// @dev emit an even signifying that the buyer has purchased tokens from the seller, what amount, and how much remains to be purchased in this deal
-    emit TokensBought(_d, deal.seller, _amount, deal.remainingAmount);
+    emit TokensBought(_dealIndex, deal.seller, _amount, deal.remainingAmount);
     if (deal.unlockSellDate > block.timestamp) {
       /// @dev if the unlockdate is the in future, then payment tokens will be sent to the futureContract, and NFT minted to the seller
       /// @dev the seller can redeem and unlock their tokens interacting with the futureContract after the unlockDate has passed
@@ -240,27 +232,27 @@ contract OTCSwap is ReentrancyGuard {
     }
     /// @dev if the reaminder is 0, then we simply delete the storage struct Deal so that it is effectively closed
     if (deal.remainingAmount == 0) {
-      delete deals[_d];
+      delete deals[_dealIndex];
     } else {
       /// @dev if there is still a remainder - we need to update our global public deal struct in storage
-      deals[_d].remainingAmount = deal.remainingAmount;
+      deals[_dealIndex].remainingAmount = deal.remainingAmount;
     }
   }
 
   /// @dev events for each function
   event NewDeal(
-    uint256 _d,
-    address _seller,
-    address _token,
-    address _paymentCurrency,
-    uint256 _remainingAmount,
-    uint256 _minimumPurchase,
-    uint256 _maxPurchase,
-    uint256 _price,
-    uint256 _maturity,
-    uint256 _unlockBuyDate,
-    uint256 _unlockSellDate,
-    bool _isWhitelist
+    uint256 dealIndex,
+    address sellerAddress,
+    address tokenAddress,
+    address paymentCurrency,
+    uint256 remainingAmount,
+    uint256 minimumPurchase,
+    uint256 maxPurchase,
+    uint256 price,
+    uint256 maturity,
+    uint256 unlockBuyDate,
+    uint256 unlockSellDate,
+    bool isWhitelist
   );
   event TokensBought(uint256 _d, address _seller, uint256 _amount, uint256 _remainingAmount);
   event DealClosed(uint256 _d);
