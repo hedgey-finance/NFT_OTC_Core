@@ -209,6 +209,7 @@ contract OTCSwap is ReentrancyGuard {
     deal.remainingAmount -= _amount;
     /// @dev emit an even signifying that the buyer has purchased tokens from the seller, what amount, and how much remains to be purchased in this deal
     emit TokensBought(_dealIndex, deal.seller, _amount, deal.remainingAmount);
+    /// If unlockSellDate is future or past, it will transfer
     if (deal.unlockSellDate > block.timestamp) {
       /// @dev if the unlockdate is the in future, then payment tokens will be sent to the futureContract, and NFT minted to the seller
       /// @dev the seller can redeem and unlock their tokens interacting with the futureContract after the unlockDate has passed
@@ -220,6 +221,7 @@ contract OTCSwap is ReentrancyGuard {
       /// @dev transfer the paymentCurrency purchase amount from the buyer to the seller's address. If the paymentCurrency is WETH - seller will receive ETH
       TransferHelper.transferPayment(weth, deal.paymentCurrency, msg.sender, payable(deal.seller), purchase);
     }
+    /// If unlockBuyDate is future or past, it will transfer
     if (deal.unlockBuyDate > block.timestamp) {
       /// @dev if the unlockdate is the in future, then tokens will be sent to the futureContract, and NFT minted to the buyer
       /// @dev the buyer can redeem and unlock their tokens interacting with the futureContract after the unlockDate has passed
@@ -230,6 +232,7 @@ contract OTCSwap is ReentrancyGuard {
       /// @dev if the unlockDate is in the past or now - then tokens are already unlocked and delivered directly to the buyer
       TransferHelper.withdrawPayment(weth, deal.token, payable(msg.sender), _amount);
     }
+    /// This will cause double the amount to be transferred.
     /// @dev if the reaminder is 0, then we simply delete the storage struct Deal so that it is effectively closed
     if (deal.remainingAmount == 0) {
       delete deals[_dealIndex];
