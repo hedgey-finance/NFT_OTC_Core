@@ -13,7 +13,7 @@ import './libraries/TransferHelper.sol';
  * @notice The NFT is basic ERC721 with an ownable usage to ensure only a single owner call mint new NFTs
  * @notice it uses the Enumerable extension to allow for easy lookup to pull balances of one account for multiple NFTs
  */
-contract Hedgeys is ERC721Enumerable, ReentrancyGuard {
+contract NonTransferrableNFTs is ERC721Enumerable, ReentrancyGuard {
   using SafeERC20 for IERC20;
   using Counters for Counters.Counter;
   Counters.Counter private _tokenIds;
@@ -41,7 +41,7 @@ contract Hedgeys is ERC721Enumerable, ReentrancyGuard {
   event NFTRedeemed(uint256 _i, address _holder, uint256 _amount, address _token, uint256 _unlockDate);
   event URISet(string newURI);
 
-  constructor(address payable _weth, string memory uri) ERC721('Hedgeys', 'HDGY') {
+  constructor(address payable _weth, string memory uri) ERC721('NonTransferrable Hedgeys', 'NTHG') {
     weth = _weth;
     baseURI = uri;
   }
