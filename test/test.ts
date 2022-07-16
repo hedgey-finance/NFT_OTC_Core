@@ -14,6 +14,7 @@ import nftMiscTests from './tests/nftMisc.spec';
 import nftRedeemTests from './tests/nftRedeem.spec';
 import nftCreateTests from './tests/nftCreate.spec';
 import nftTransferTests from './tests/nftTransfer.spec';
+import noTransferTest from './tests/nftNoTransfer.spec';
 
 describe('Hedgey OTC Library', async () => {
   const provider = new MockProvider();
@@ -122,5 +123,8 @@ describe('Hedgey OTC Library', async () => {
     describe('Transferring - Token', () => {
       nftTransferTests(false, true);
     });
+  });
+  describe('Non Transferrable NFT', () => {
+    describe('Cannot Transfer', () => noTransferTest(false));
   });
 });

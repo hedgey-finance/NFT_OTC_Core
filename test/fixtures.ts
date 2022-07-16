@@ -7,6 +7,7 @@ import { deployWeth } from '@thenextblock/hardhat-weth';
 
 import Token from '../artifacts/contracts/test/Token.sol/Token.json';
 import NFT from '../artifacts/contracts/FuturesNFT.sol/Hedgeys.json';
+import NoTransferNFT from '../artifacts/contracts/NonTransferrableNFT.sol/NonTransferrableNFTs.json';
 import CeloNFT from '../artifacts/contracts/CeloFuturesNFT.sol/CeloHedgeys.json';
 import BurnToken from '../artifacts/contracts/test/BurnToken.sol/BurnToken.json';
 import FakeToken from '../artifacts/contracts/test/FakeToken.sol/FakeToken.json';
@@ -244,6 +245,49 @@ export async function createdNFTFixture(
   const nft = isCelo
     ? await deployContract(wallet, CeloNFT, [''])
     : await deployContract(wallet, NFT, [weth.address, '']);
+
+  //generates an existing NFT Futures position at index 1
+  if (isWeth) {
+    //need to get myself weth first
+    await weth.deposit({ value: Constants.E18_100 });
+    await weth.approve(nft.address, Constants.E18_100);
+    await nft.createNFT(holder.address, amount, weth.address, unlockDate);
+  } else {
+    await token.approve(nft.address, Constants.E18_100);
+    await nft.createNFT(holder.address, amount, token.address, unlockDate);
+  }
+
+  return { nft, token, weth };
+}
+
+export async function newNoTransferNFTFixture(
+  provider: Web3Provider,
+  [wallet]: Wallet[],
+  isCelo: boolean = false
+): Promise<NewNFTFixture> {
+  const weth = await wethFixture(provider, [wallet]);
+  const token = await tokenFixture(provider, [wallet]);
+  const nft = await deployContract(wallet, NoTransferNFT, [weth.address, '']);
+  await token.approve(nft.address, Constants.E18_100);
+
+  const burn = await burnTokenFixture(provider, [wallet]);
+  await burn.approve(nft.address, Constants.E18_100);
+
+  return { nft, token, weth, burn };
+}
+
+export async function createdNoTransferNFTFixture(
+  provider: Web3Provider,
+  [wallet]: Wallet[],
+  isWeth: boolean,
+  holder: Wallet,
+  amount: string,
+  unlockDate: string,
+  isCelo: boolean = false
+): Promise<CreatedNFTFixture> {
+  const weth = await wethFixture(provider, [wallet]);
+  const token = await tokenFixture(provider, [wallet]);
+  const nft = await deployContract(wallet, NoTransferNFT, [weth.address, '']);
 
   //generates an existing NFT Futures position at index 1
   if (isWeth) {
