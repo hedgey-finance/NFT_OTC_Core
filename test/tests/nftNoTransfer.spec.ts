@@ -23,12 +23,10 @@ export default (isWeth: boolean, isCelo: boolean = false) => {
     const token = fixture.token;
     const asset = isWeth ? weth : token;
     console.log('trying to transfer');
-    expect(await nft.transferFrom(wallet.address, other.address, '1'))
+    await expect(nft.transferFrom(wallet.address, other.address, '1'))
       .to.be.revertedWith('Not transferrable');
 
-      expect(await nft.safeTransferFrom(wallet.address, other.address, '1'))
+    await expect(nft["safeTransferFrom(address,address,uint256)"](wallet.address, other.address, '1'))
       .to.be.revertedWith('Not transferrable');
   });
-
-  
 };
