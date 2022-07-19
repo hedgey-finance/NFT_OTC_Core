@@ -22,7 +22,6 @@ export default (isWeth: boolean, isCelo: boolean = false) => {
     const weth = fixture.weth;
     const token = fixture.token;
     const asset = isWeth ? weth : token;
-    console.log('trying to transfer');
     await expect(nft.transferFrom(wallet.address, other.address, '1'))
       .to.be.revertedWith('Not transferrable');
 

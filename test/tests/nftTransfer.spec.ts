@@ -78,7 +78,7 @@ export default (isWeth: boolean, isCelo: boolean = false) => {
     const nft = fixture.nft;
 
     await expect(nft.connect(other).approve(other.address, '1')).to.be.revertedWith(
-      'ERC721: approve caller is not token owner nor approved for all'
+      'ERC721: approve caller is not owner nor approved for all'
     );
   });
 

@@ -47,7 +47,7 @@ export default (isWeth: boolean = false, isCelo: boolean = false) => {
     expect(future[0]).to.eq('0');
     expect(future[1]).to.eq(Constants.ZERO_ADDRESS);
     expect(future[2]).to.eq('0');
-    await expect(nft.ownerOf('1')).to.be.revertedWith('ERC721: invalid token ID');
+    await expect(nft.ownerOf('1')).to.be.revertedWith('ERC721: owner query for nonexistent token');
     expect(await asset.balanceOf(nft.address)).to.eq('0');
     expect(await nft.balanceOf(wallet.address)).to.eq('0');
   });
