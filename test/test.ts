@@ -130,6 +130,7 @@ describe('Hedgey OTC Library', async () => {
       nftTransferTests(false, true);
     });
   });
+  
   describe('Non Transferrable NFT', () => {
     describe('Cannot Transfer', () => noTransferTest(false));
     describe('Redeeming', () => nftNoTransferRedeemTests(false, false));

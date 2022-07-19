@@ -8,7 +8,7 @@ import moment from 'moment';
 const initialSupply = ethers.utils.parseEther('10000');
 const amount = ethers.utils.parseEther('1');
 const decimals = 18;
-const tomorrow = moment().add(1, 'day').unix().toString();
+const nextWeek = moment().add(1, 'week').unix().toString();
 
 export default (isCelo: boolean = false) => {
   const provider = new MockProvider();
@@ -33,18 +33,18 @@ export default (isCelo: boolean = false) => {
     //pre balance check
     expect(await token.balanceOf(nonTransferrableNFTs.address)).to.eq('0');
     await token.approve(nonTransferrableNFTs.address, amount);
-    const createTransaction = await nonTransferrableNFTs.createNFT(wallet.address, amount, token.address, tomorrow);
+    const createTransaction = await nonTransferrableNFTs.createNFT(wallet.address, amount, token.address, nextWeek);
     const receipt = await createTransaction.wait();
     const event = receipt.events.find((event: any) => event.event === 'NFTCreated');
     const id = event.args['_i'];
 
     expect(createTransaction)
       .to.emit(nonTransferrableNFTs, 'NFTCreated')
-      .withArgs(id, wallet.address, amount, token.address, tomorrow);
+      .withArgs(id, wallet.address, amount, token.address, nextWeek);
 
     const future = await nonTransferrableNFTs.futures(id);
     expect(future.token).to.eq(token.address);
-    expect(future.unlockDate).to.eq(tomorrow);
+    expect(future.unlockDate).to.eq(nextWeek);
     expect(await token.balanceOf(nonTransferrableNFTs.address)).to.eq(amount);
     //check holder
     expect(await nonTransferrableNFTs.balanceOf(wallet.address)).to.eq('1');
@@ -53,11 +53,11 @@ export default (isCelo: boolean = false) => {
   });
 
   it('reverts if the amount == 0', async () => {
-    await expect(nonTransferrableNFTs.createNFT(wallet.address, '0', token.address, tomorrow)).to.be.revertedWith('NFT01');
+    await expect(nonTransferrableNFTs.createNFT(wallet.address, '0', token.address, nextWeek)).to.be.revertedWith('NFT01');
   });
 
   it('reverts if the token == zero address', async () => {
-    await expect(nonTransferrableNFTs.createNFT(wallet.address, amount, ethers.constants.AddressZero, tomorrow)).to.be.revertedWith('NFT01');
+    await expect(nonTransferrableNFTs.createNFT(wallet.address, amount, ethers.constants.AddressZero, nextWeek)).to.be.revertedWith('NFT01');
   });
 
   it('reverts if the unlockDate is less than now', async () => {
@@ -65,12 +65,12 @@ export default (isCelo: boolean = false) => {
   });
 
   it('reverts if my wallet has insufficient balance', async () => {
-    await expect(nonTransferrableNFTs.createNFT(wallet.address, ethers.utils.parseEther('10000'), token.address, tomorrow)).to.be.revertedWith(
+    await expect(nonTransferrableNFTs.createNFT(wallet.address, ethers.utils.parseEther('10000'), token.address, nextWeek)).to.be.revertedWith(
       'THL01'
     );
   });
 
   it('reverts if the tokens sent do not match the amount received', async () => {
-    expect(nonTransferrableNFTs.createNFT(wallet.address, amount, burn.address, tomorrow)).to.be.revertedWith('THL02');
+    expect(nonTransferrableNFTs.createNFT(wallet.address, amount, burn.address, nextWeek)).to.be.revertedWith('THL02');
   });
 };
