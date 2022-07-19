@@ -111,3 +111,11 @@ cache/
 
 # Coverage file
 coverage.json
+
+slither-results.json
+
+build
+
+migrations
+
+truffle-config.js
