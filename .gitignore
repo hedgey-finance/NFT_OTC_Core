@@ -115,3 +115,10 @@ coverage.json
 scripts
 
 hardhat.config.ts
+slither-results.json
+
+build
+
+migrations
+
+truffle-config.js

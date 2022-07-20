@@ -14,7 +14,12 @@ import nftMiscTests from './tests/nftMisc.spec';
 import nftRedeemTests from './tests/nftRedeem.spec';
 import nftCreateTests from './tests/nftCreate.spec';
 import nftTransferTests from './tests/nftTransfer.spec';
+
 import noTransferTest from './tests/nftNoTransfer.spec';
+import nftNoTransferCreateTests from './tests/nftNoTransferCreate.spec';
+import nftNoTransferRedeemTests from './tests/nftNoTransferRedeem.spec';
+
+import otcWithNonTransferableNFT from './tests/otcNoTransfer.spec';
 
 describe('Hedgey OTC Library', async () => {
   const provider = new MockProvider();
@@ -41,6 +46,9 @@ describe('Hedgey OTC Library', async () => {
   ];
 
   describe('OTC Contract', () => {
+    describe('OTC deal with non transferrable NFT', () => {
+      otcWithNonTransferableNFT();
+    })
     describe('Constructor', otcConstructorTests);
     describe('Create Errors', otcCreateErrorsTests);
 
@@ -96,8 +104,11 @@ describe('Hedgey OTC Library', async () => {
     describe('URI & Name', () => nftMiscTests(false));
 
     describe('Creating', () => nftCreateTests(false));
+    
 
     describe('Redeeming - Token', () => nftRedeemTests);
+    
+
     describe('Redeeming - Weth', () => {
       nftRedeemTests(true);
     });
@@ -124,7 +135,10 @@ describe('Hedgey OTC Library', async () => {
       nftTransferTests(false, true);
     });
   });
+  
   describe('Non Transferrable NFT', () => {
     describe('Cannot Transfer', () => noTransferTest(false));
+    describe('Redeeming', () => nftNoTransferRedeemTests(false, false));
+    describe('Creating', () => nftNoTransferCreateTests(false));
   });
 });
