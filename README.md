@@ -25,14 +25,17 @@ npx hardhat test
 Deployed from commit hash `06a3c29c3b0ad0b2347aba9d858e044f1de59edb`  
 All of the smart contracts on production mainnets have been deployed at the same addresses below:  
 Hedgeys (Futures.sol): `0x2AA5d15Eb36E5960d056e8FeA6E7BB3e2a06A351`    
-HedgeyOTC: `0xad337077480134028B7C68AF290E891ce28076Eb`  
+HedgeyOTC linked to Hedgeys: `0xad337077480134028B7C68AF290E891ce28076Eb`  
 
-Deployments on below mainnets:  
-- Ethereum Mainnet  
+NonTransferrableNFT: `0x6572a11EA2DD4E7B6161B531C3FDfd9CB6e9bdc6`  
+OTC linked to nonTransferrable: `0x2e3f19e467E729d0b732a1D73A3210a2218C1F5F`  
+
+Hedgeys Deployments on below mainnets, with the NonTransferrableNFT where noted:  
+- Ethereum Mainnet  (+ NonTransferrable)  
 - Polygon
 - Fantom
 - Avalanche C-chain
-- Gnosis
+- Gnosis  (+ NonTransferrable)  
 - Harmony
 - Binance Smart Chain 
 - Celo
