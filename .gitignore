@@ -111,3 +111,7 @@ cache/
 
 # Coverage file
 coverage.json
+
+scripts
+
+hardhat.config.ts
