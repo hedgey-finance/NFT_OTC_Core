@@ -114,7 +114,6 @@ coverage.json
 
 scripts
 
-.hardhat.config.ts
 slither-results.json
 
 build
