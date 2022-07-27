@@ -4,6 +4,8 @@ import { MockProvider } from 'ethereum-waffle';
 import { inFiveSeconds } from '../helpers';
 import * as Constants from '../constants';
 import { createdNoTransferNFTFixture } from '../fixtures';
+import moment from 'moment';
+const tomorrow = moment().add(1, 'day').unix().toString();
 
 export default (isWeth: boolean, isCelo: boolean = false) => {
   const provider = new MockProvider();
@@ -12,12 +14,8 @@ export default (isWeth: boolean, isCelo: boolean = false) => {
   const amount = Constants.E18_1;
   let unlockDate: string;
 
-  beforeEach(async () => {
-    unlockDate = inFiveSeconds();
-  });
-
   it('wallet cannot transfer a non-transferrable NFT', async () => {
-    const fixture = await createdNoTransferNFTFixture(provider, [wallet], isWeth, wallet, amount, unlockDate, isCelo);
+    const fixture = await createdNoTransferNFTFixture(provider, [wallet], isWeth, wallet, amount, tomorrow, isCelo);
     const nft = fixture.nft;
     const weth = fixture.weth;
     const token = fixture.token;
