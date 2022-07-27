@@ -46,7 +46,7 @@ contract NonTransferrableNFTs is ERC721Enumerable, ReentrancyGuard {
     baseURI = uri;
   }
 
-  receive() external payable {}
+  //receive() external payable {}
 
   /**
    * @notice The external function creates a Future position
@@ -133,7 +133,7 @@ contract NonTransferrableNFTs is ERC721Enumerable, ReentrancyGuard {
     /// @dev delete the futures struct so that the owner cannot call this function again
     delete futures[_id];
     /// @dev physically deliver the tokens to the NFT owner
-    TransferHelper.withdrawPayment(weth, future.token, _holder, future.amount);
+    TransferHelper.withdrawTokens(future.token, _holder, future.amount);
   }
 
   function _transfer(
