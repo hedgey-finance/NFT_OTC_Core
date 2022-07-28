@@ -12,6 +12,8 @@ import './libraries/TransferHelper.sol';
  * @notice The time locked tokens are redeemable by the owner of the NFT
  * @notice The NFT is basic ERC721 with an ownable usage to ensure only a single owner call mint new NFTs
  * @notice it uses the Enumerable extension to allow for easy lookup to pull balances of one account for multiple NFTs
+ * @notice this contract uses a non-transferrable version of the NFTs - such that they are "soul bound" and once used in a wallet cannot be moved anywhere else
+ * @notice this contract will not accept ETH - only standard ERC20 tokens for locking
  */
 contract NonTransferrableNFTs is ERC721Enumerable, ReentrancyGuard {
   using SafeERC20 for IERC20;
@@ -22,8 +24,8 @@ contract NonTransferrableNFTs is ERC721Enumerable, ReentrancyGuard {
   address payable public weth;
   /// @dev baseURI is the URI directory where the metadata is stored
   string private baseURI;
-  /// @dev this is a counter used so that the baseURI can only be set once after deployment
-  uint8 private uriSet = 0;
+  /// @dev admin for setting the baseURI;
+  address private admin;
 
   /// @dev this maping maps the _tokenIDs from Counters to a Future struct. the same _tokenIDs that is set for the NFT id is mapped to the futures
   mapping(uint256 => Future) public futures;
@@ -44,9 +46,8 @@ contract NonTransferrableNFTs is ERC721Enumerable, ReentrancyGuard {
   constructor(address payable _weth, string memory uri) ERC721('NonTransferrable Hedgeys', 'NTHG') {
     weth = _weth;
     baseURI = uri;
+    admin = msg.sender;
   }
-
-  //receive() external payable {}
 
   /**
    * @notice The external function creates a Future position
@@ -95,15 +96,14 @@ contract NonTransferrableNFTs is ERC721Enumerable, ReentrancyGuard {
 
   /// @notice function to set the base URI after the contract has been launched, only once - this is done by the admin
   /// @notice there is no actual on-chain functions that require this URI to be anything beyond a blank string ("")
-  /// @param _uri is the
+  /// @param _uri is the new baseURI for the metadata
   function updateBaseURI(string memory _uri) external {
-    /// @dev this function can only be called once - when the public variable uriSet is set to 0
-    require(uriSet == 0, 'NFT02');
+    /// @dev this function can only be called by the admin
+    require(msg.sender == admin, 'NFT02');
     /// @dev update the baseURI with the new _uri
     baseURI = _uri;
-    /// @dev set the public variable uriSet to 1 so that this function cannot be called anymore
-    /// @dev cheaper to use uint8 than bool for this admin safety feature
-    uriSet = 1;
+    /// @dev delete the admin
+    delete admin;
     /// @dev emit event of the update uri
     emit URISet(_uri);
   }
@@ -136,6 +136,8 @@ contract NonTransferrableNFTs is ERC721Enumerable, ReentrancyGuard {
     TransferHelper.withdrawTokens(future.token, _holder, future.amount);
   }
 
+  /// @notice this is the override transfer function that makes this NFT non-transferrable
+  /// @dev we have to use the same params even though they are useless to override the standard function inherrited from the openzeppelin contract
   function _transfer(
     address from,
     address to,
