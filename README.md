@@ -21,6 +21,14 @@ npx hardhat compile
 npx hardhat test
 ```
 
+## Deploymenting    
+To deploy the contracts, use your preferred web3 deployment script. When deploying the contracts we go in a specific order for immediate linking of everything:  
+1. deploy the NFT contract with the WETH address and blank '' string for the starting URI  
+2. await the NFT contract deployment and then deploy the OTC contract with the WETH address and the newly confirmed NFT contract address for second constructor param  
+3. call the function 'updateBaseURI' immediately after the NFT contract has been deployed with the URL that you use (for hedgey its https://nfts.hedgey.finance/${nft_address}),  
+  ensuring that the uri is immediately set - now it cannot be reset by anyone again. This prevents unneccessary risks of having an admin address continue to manage the baseURI.  
+
+
 ## Active Mainnet Deployments  
 Deployed from commit hash `06a3c29c3b0ad0b2347aba9d858e044f1de59edb`  
 All of the smart contracts on production mainnets have been deployed at the same addresses below:  

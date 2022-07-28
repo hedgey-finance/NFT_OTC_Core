@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.13;
+pragma solidity 0.8.13;
 
 /// @notice this interface is used for integrations of the OTC contract
 /// @notice it contains the core external functions that can be used to interact with the smart contract
