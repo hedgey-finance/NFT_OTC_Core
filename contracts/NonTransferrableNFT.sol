@@ -86,7 +86,7 @@ contract NonTransferrableNFTs is ERC721Enumerable, ReentrancyGuard {
   /// @dev this function calls the _redeemFuture(...) internal function which handles the requirements and checks
   function redeemNFT(uint256 _id) external nonReentrant returns (bool) {
     /// @dev calls the internal _redeemNFT function that performs various checks to ensure that only the owner of the NFT can redeem their NFT and Future position
-    _redeemNFT(payable(msg.sender), _id);
+    _redeemNFT(msg.sender, _id);
     return true;
   }
 
@@ -114,7 +114,7 @@ contract NonTransferrableNFTs is ERC721Enumerable, ReentrancyGuard {
    * @param _holder is the owner of the NFT calling the function
    * @param _id is the unique id of the NFT and unique id of the Future struct
    */
-  function _redeemNFT(address payable _holder, uint256 _id) internal {
+  function _redeemNFT(address _holder, uint256 _id) internal {
     /// @dev ensure that only the owner of the NFT can call this function
     require(ownerOf(_id) == _holder, 'NFT03');
     /// @dev pull the future data from storage and keep in memory to check requirements and disribute tokens
