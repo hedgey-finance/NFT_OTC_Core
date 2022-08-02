@@ -48,7 +48,7 @@ describe('Hedgey OTC Library', async () => {
   describe('OTC Contract', () => {
     describe('OTC deal with non transferrable NFT', () => {
       otcWithNonTransferableNFT();
-    })
+    });
     describe('Constructor', otcConstructorTests);
     describe('Create Errors', otcCreateErrorsTests);
 
@@ -104,10 +104,8 @@ describe('Hedgey OTC Library', async () => {
     describe('URI & Name', () => nftMiscTests(false));
 
     describe('Creating', () => nftCreateTests(false));
-    
 
     describe('Redeeming - Token', () => nftRedeemTests());
-    
 
     describe('Redeeming - Weth', () => {
       nftRedeemTests(true);
@@ -135,7 +133,7 @@ describe('Hedgey OTC Library', async () => {
       nftTransferTests(false, true);
     });
   });
-  
+
   describe('Non Transferrable NFT', () => {
     describe('Cannot Transfer', () => noTransferTest(false));
     describe('Redeeming', () => nftNoTransferRedeemTests(false));

@@ -11,7 +11,6 @@ const tomorrow = moment().add(1, 'day').unix().toString();
 const threeDays = moment().add(3, 'day').unix().toString();
 
 export default (isWeth: boolean = false) => {
-
   let weth: Contract, nonTransferrableNFTs: Contract, token: Contract, burn: Contract, account: Signer, other: Signer;
 
   before(async () => {
@@ -20,8 +19,8 @@ export default (isWeth: boolean = false) => {
     other = accounts[1];
 
     weth = await deployWeth(account);
-    await weth.deposit({value: amount});
-    
+    await weth.deposit({ value: amount });
+
     const NonTransferrableNFTs = await ethers.getContractFactory('NonTransferrableNFTs');
     nonTransferrableNFTs = await NonTransferrableNFTs.deploy('NonTransfer', 'NT');
 

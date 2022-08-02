@@ -80,7 +80,6 @@ contract NonTransferrableNFTs is ERC721Enumerable, ReentrancyGuard {
     return newItemId;
   }
 
-
   /// @notice this is the external function that actually redeems an NFT position
   /// @notice returns true if the function is successful
   /// @dev this function calls the _redeemFuture(...) internal function which handles the requirements and checks

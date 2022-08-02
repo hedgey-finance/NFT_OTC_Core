@@ -18,7 +18,7 @@ export default () => {
 
   before(async () => {
     weth = await deployWeth(wallet);
-    
+
     const NonTransferrableNFTs = await ethers.getContractFactory('NonTransferrableNFTs');
     nonTransferrableNFTs = await NonTransferrableNFTs.deploy('NonTransfer', 'NT');
 
@@ -53,21 +53,27 @@ export default () => {
   });
 
   it('reverts if the amount == 0', async () => {
-    await expect(nonTransferrableNFTs.createNFT(wallet.address, '0', token.address, nextWeek)).to.be.revertedWith('NFT01');
+    await expect(nonTransferrableNFTs.createNFT(wallet.address, '0', token.address, nextWeek)).to.be.revertedWith(
+      'NFT01'
+    );
   });
 
   it('reverts if the token == zero address', async () => {
-    await expect(nonTransferrableNFTs.createNFT(wallet.address, amount, ethers.constants.AddressZero, nextWeek)).to.be.revertedWith('NFT01');
+    await expect(
+      nonTransferrableNFTs.createNFT(wallet.address, amount, ethers.constants.AddressZero, nextWeek)
+    ).to.be.revertedWith('NFT01');
   });
 
   it('reverts if the unlockDate is less than now', async () => {
-    await expect(nonTransferrableNFTs.createNFT(wallet.address, amount, token.address, '0')).to.be.revertedWith('NFT01');
+    await expect(nonTransferrableNFTs.createNFT(wallet.address, amount, token.address, '0')).to.be.revertedWith(
+      'NFT01'
+    );
   });
 
   it('reverts if my wallet has insufficient balance', async () => {
-    await expect(nonTransferrableNFTs.createNFT(wallet.address, ethers.utils.parseEther('10000'), token.address, nextWeek)).to.be.revertedWith(
-      'THL01'
-    );
+    await expect(
+      nonTransferrableNFTs.createNFT(wallet.address, ethers.utils.parseEther('10000'), token.address, nextWeek)
+    ).to.be.revertedWith('THL01');
   });
 
   it('reverts if the tokens sent do not match the amount received', async () => {
