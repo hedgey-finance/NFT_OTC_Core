@@ -4,7 +4,7 @@ import { expect } from 'chai';
 import { MockProvider } from 'ethereum-waffle';
 import { Contract } from 'ethers';
 
-import { inFiveSeconds } from '../helpers';
+import { inTenSeconds } from '../helpers';
 import * as Constants from '../constants';
 import { createdNFTFixture } from '../fixtures';
 
@@ -21,7 +21,7 @@ export default (isWeth: boolean = false, isCelo: boolean = false) => {
   let asset: WETH9 | Contract;
 
   beforeEach(async () => {
-    unlockDate = inFiveSeconds();
+    unlockDate = inTenSeconds();
 
     const fixture = await createdNFTFixture(provider, [wallet], isWeth, wallet, amount, unlockDate, isCelo);
     token = fixture.token;
@@ -34,7 +34,7 @@ export default (isWeth: boolean = false, isCelo: boolean = false) => {
 
   it('redeem future', async () => {
     //gotta wait 6 seconds for it to be redeemable;
-    await new Promise((resolve) => setTimeout(resolve, 6000));
+    await new Promise((resolve) => setTimeout(resolve, 11000));
 
     await expect(nft.redeemNFT('1'))
       .to.emit(nft, 'NFTRedeemed')
@@ -53,7 +53,7 @@ export default (isWeth: boolean = false, isCelo: boolean = false) => {
   });
 
   it('reverts if the wallet sending is not the owner', async () => {
-    await new Promise((resolve) => setTimeout(resolve, 6000));
+    await new Promise((resolve) => setTimeout(resolve, 11000));
     await expect(nft.connect(other).redeemNFT('1')).to.be.revertedWith('NFT03');
   });
 

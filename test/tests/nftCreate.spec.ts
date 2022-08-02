@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { MockProvider } from 'ethereum-waffle';
 
-import { inFiveSeconds } from '../helpers';
+import { inTenSeconds } from '../helpers';
 import * as Constants from '../constants';
 import { newNFTFixture } from '../fixtures';
 
@@ -14,7 +14,7 @@ export default (isCelo: boolean = false) => {
   const amount = Constants.E18_1;
 
   beforeEach(async () => {
-    unlockDate = inFiveSeconds();
+    unlockDate = inTenSeconds();
   });
 
   it('create an NFT', async () => {

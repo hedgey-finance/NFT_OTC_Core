@@ -1,7 +1,7 @@
 import { ZERO_ADDRESS, OTC_DEFAULTS } from './constants';
 
-export const inFiveSeconds = (): string => {
-  return (Math.round(Date.now() / 1000) + 5).toString();
+export const inTenSeconds = (): string => {
+  return (Math.round(Date.now() / 1000) + 10).toString();
 };
 
 export interface IIndexable {

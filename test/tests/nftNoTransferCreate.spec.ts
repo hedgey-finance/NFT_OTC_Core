@@ -10,7 +10,7 @@ const amount = ethers.utils.parseEther('1');
 const decimals = 18;
 const nextWeek = moment().add(1, 'week').unix().toString();
 
-export default (isCelo: boolean = false) => {
+export default () => {
   const provider = new MockProvider();
   const [wallet] = provider.getWallets();
 
@@ -20,7 +20,7 @@ export default (isCelo: boolean = false) => {
     weth = await deployWeth(wallet);
     
     const NonTransferrableNFTs = await ethers.getContractFactory('NonTransferrableNFTs');
-    nonTransferrableNFTs = await NonTransferrableNFTs.deploy(weth.address, '');
+    nonTransferrableNFTs = await NonTransferrableNFTs.deploy('NonTransfer', 'NT');
 
     const Token = await ethers.getContractFactory('Token');
     token = await Token.deploy(initialSupply, decimals);

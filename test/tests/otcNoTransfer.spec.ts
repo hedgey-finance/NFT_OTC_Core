@@ -26,7 +26,7 @@ export default () => {
     weth = await deployWeth(wallet);
 
     const NonTransferrableNFTs = await ethers.getContractFactory('NonTransferrableNFTs');
-    nonTransferrableNFTs = await NonTransferrableNFTs.deploy(weth.address, '');
+    nonTransferrableNFTs = await NonTransferrableNFTs.deploy('NonTransfer', 'NT');
 
     const HedgeyOTC = await ethers.getContractFactory('HedgeyOTC');
     hedgeyOTC = await HedgeyOTC.deploy(weth.address, nonTransferrableNFTs.address);

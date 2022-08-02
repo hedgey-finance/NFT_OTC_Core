@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { MockProvider } from 'ethereum-waffle';
 
-import { inFiveSeconds } from '../helpers';
+import { inTenSeconds } from '../helpers';
 import * as Constants from '../constants';
 import { createdNFTFixture } from '../fixtures';
 
@@ -13,7 +13,7 @@ export default (isWeth: boolean, isCelo: boolean = false) => {
   let unlockDate: string;
 
   beforeEach(async () => {
-    unlockDate = inFiveSeconds();
+    unlockDate = inTenSeconds();
   });
 
   it('wallet transfers to other & other redeems', async () => {
@@ -31,7 +31,7 @@ export default (isWeth: boolean, isCelo: boolean = false) => {
     expect(await nft.ownerOf('1')).to.eq(other.address);
     expect(await asset.balanceOf(nft.address)).to.eq(amount);
 
-    await new Promise((resolve) => setTimeout(resolve, 6000));
+    await new Promise((resolve) => setTimeout(resolve, 11000));
 
     expect(await nft.connect(other).redeemNFT('1'))
       .to.emit(nft, 'NFTRedeemed')
@@ -63,7 +63,7 @@ export default (isWeth: boolean, isCelo: boolean = false) => {
     expect(await nft.ownerOf('1')).to.eq(other.address);
     expect(await asset.balanceOf(nft.address)).to.eq(amount);
 
-    await new Promise((resolve) => setTimeout(resolve, 6000));
+    await new Promise((resolve) => setTimeout(resolve, 11000));
 
     expect(await nft.connect(other).redeemNFT('1'))
       .to.emit(nft, 'NFTRedeemed')

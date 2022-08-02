@@ -262,12 +262,11 @@ export async function createdNFTFixture(
 
 export async function newNoTransferNFTFixture(
   provider: Web3Provider,
-  [wallet]: Wallet[],
-  isCelo: boolean = false
+  [wallet]: Wallet[]
 ): Promise<NewNFTFixture> {
   const weth = await wethFixture(provider, [wallet]);
   const token = await tokenFixture(provider, [wallet]);
-  const nft = await deployContract(wallet, NoTransferNFT, [weth.address, '']);
+  const nft = await deployContract(wallet, NoTransferNFT, ['NoTransfer', 'NT']);
   await token.approve(nft.address, Constants.E18_100);
 
   const burn = await burnTokenFixture(provider, [wallet]);
@@ -282,12 +281,11 @@ export async function createdNoTransferNFTFixture(
   isWeth: boolean,
   holder: Wallet,
   amount: string,
-  unlockDate: string,
-  isCelo: boolean = false
+  unlockDate: string
 ): Promise<CreatedNFTFixture> {
   const weth = await wethFixture(provider, [wallet]);
   const token = await tokenFixture(provider, [wallet]);
-  const nft = await deployContract(wallet, NoTransferNFT, [weth.address, '']);
+  const nft = await deployContract(wallet, NoTransferNFT, ['NoTransfer', 'NT']);
 
   //generates an existing NFT Futures position at index 1
   if (isWeth) {

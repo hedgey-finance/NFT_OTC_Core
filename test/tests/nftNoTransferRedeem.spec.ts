@@ -10,7 +10,7 @@ const decimals = 18;
 const tomorrow = moment().add(1, 'day').unix().toString();
 const threeDays = moment().add(3, 'day').unix().toString();
 
-export default (isWeth: boolean = false, isCelo: boolean = false) => {
+export default (isWeth: boolean = false) => {
 
   let weth: Contract, nonTransferrableNFTs: Contract, token: Contract, burn: Contract, account: Signer, other: Signer;
 
@@ -23,7 +23,7 @@ export default (isWeth: boolean = false, isCelo: boolean = false) => {
     await weth.deposit({value: amount});
     
     const NonTransferrableNFTs = await ethers.getContractFactory('NonTransferrableNFTs');
-    nonTransferrableNFTs = await NonTransferrableNFTs.deploy(weth.address, '');
+    nonTransferrableNFTs = await NonTransferrableNFTs.deploy('NonTransfer', 'NT');
 
     const Token = await ethers.getContractFactory('Token');
     token = await Token.deploy(initialSupply, decimals);
