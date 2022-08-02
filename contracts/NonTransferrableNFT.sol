@@ -20,8 +20,6 @@ contract NonTransferrableNFTs is ERC721Enumerable, ReentrancyGuard {
   using Counters for Counters.Counter;
   Counters.Counter private _tokenIds;
 
-  /// @dev handles weth in case WETH is being held - this allows us to unwrap and deliver ETH upon redemption of a timelocked NFT with ETH
-  address payable public weth;
   /// @dev baseURI is the URI directory where the metadata is stored
   string private baseURI;
   /// @dev admin for setting the baseURI;
@@ -43,9 +41,7 @@ contract NonTransferrableNFTs is ERC721Enumerable, ReentrancyGuard {
   event NFTRedeemed(uint256 _i, address _holder, uint256 _amount, address _token, uint256 _unlockDate);
   event URISet(string newURI);
 
-  constructor(address payable _weth, string memory uri) ERC721('NonTransferrable Hedgeys', 'NTHG') {
-    weth = _weth;
-    baseURI = uri;
+  constructor(string memory name, string memory symbol) ERC721(name, symbol) {
     admin = msg.sender;
   }
 
