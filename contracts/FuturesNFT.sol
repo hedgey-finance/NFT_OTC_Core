@@ -20,10 +20,6 @@ contract Hedgeys is ERC721Enumerable, ReentrancyGuard {
 
   /// @dev handles weth in case WETH is being held - this allows us to unwrap and deliver ETH upon redemption of a timelocked NFT with ETH
   address payable public weth;
-  /// @dev baseURI is the URI directory where the metadata is stored
-  string private baseURI;
-  /// @dev this is a counter used so that the baseURI can only be set once after deployment
-  uint8 private uriSet = 0;
 
   /// @dev the Future is the storage in a struct of the tokens that are time locked
   /// @dev the Future contains the information about the amount of tokens, the underlying token address (asset), and the date in which they are unlocked
@@ -35,10 +31,10 @@ contract Hedgeys is ERC721Enumerable, ReentrancyGuard {
 
   /// @dev this maping maps the _tokenIDs from Counters to a Future struct. the same _tokenIDs that is set for the NFT id is mapped to the futures
   mapping(uint256 => Future) public futures;
+  mapping(uint256 => string) private tokenUris;
 
-  constructor(address payable _weth, string memory uri) ERC721('Hedgeys', 'HDGY') {
+  constructor(address payable _weth) ERC721('Hedgeys', 'HDGY') {
     weth = _weth;
-    baseURI = uri;
   }
 
   receive() external payable {}
@@ -58,7 +54,8 @@ contract Hedgeys is ERC721Enumerable, ReentrancyGuard {
     address _holder,
     uint256 _amount,
     address _token,
-    uint256 _unlockDate
+    uint256 _unlockDate,
+    string memory _tokenUri
   ) external nonReentrant returns (uint256) {
     /// @dev increment our counter by 1
     _tokenIds.increment();
@@ -73,29 +70,17 @@ contract Hedgeys is ERC721Enumerable, ReentrancyGuard {
     /// @dev this safely mints an NFT to the _holder address at the current counter index newItemID.
     /// @dev _safeMint ensures that the receiver address can receive and handle ERC721s - which is either a normal wallet, or a smart contract that has implemented ERC721 receiver
     _safeMint(_holder, newItemId);
+    tokenUris[newItemId] = _tokenUri;
     /// @dev emit an event with the details of the NFT id minted, plus the attributes of the locked tokens
     emit NFTCreated(newItemId, _holder, _amount, _token, _unlockDate);
     return newItemId;
   }
 
-  /// @dev internal function used by the standard ER721 function tokenURI to retrieve the baseURI privately held to visualize and get the metadata
-  function _baseURI() internal view override returns (string memory) {
-    return baseURI;
-  }
-
-  /// @notice function to set the base URI after the contract has been launched, only once - this is done by the admin
-  /// @notice there is no actual on-chain functions that require this URI to be anything beyond a blank string ("")
-  /// @param _uri is the
-  function updateBaseURI(string memory _uri) external {
-    /// @dev this function can only be called once - when the public variable uriSet is set to 0
-    require(uriSet == 0, 'NFT02');
-    /// @dev update the baseURI with the new _uri
-    baseURI = _uri;
-    /// @dev set the public variable uriSet to 1 so that this function cannot be called anymore
-    /// @dev cheaper to use uint8 than bool for this admin safety feature
-    uriSet = 1;
-    /// @dev emit event of the update uri
-    emit URISet(_uri);
+  function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+    require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+    string memory tokenUri = tokenUris[tokenId];
+    require(bytes(tokenUri).length > 0, "FuturesNFT: Token ID nonexistent");
+    return tokenUri;
   }
 
   /// @notice this is the external function that actually redeems an NFT position
@@ -131,6 +116,7 @@ contract Hedgeys is ERC721Enumerable, ReentrancyGuard {
     _burn(_id);
     /// @dev delete the futures struct so that the owner cannot call this function again
     delete futures[_id];
+    delete tokenUris[_id];
     /// @dev physically deliver the tokens to the NFT owner
     TransferHelper.withdrawPayment(weth, future.token, _holder, future.amount);
   }
