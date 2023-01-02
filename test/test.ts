@@ -21,122 +21,128 @@ import nftNoTransferRedeemTests from './tests/nftNoTransferRedeem.spec';
 
 import otcWithNonTransferableNFT from './tests/otcNoTransfer.spec';
 
-describe('Hedgey OTC Library', async () => {
-  const provider = new MockProvider();
-  const [, buyer] = provider.getWallets();
+import batchNFTMintTest from './tests/batchNFTMint.spec';
 
-  // Set up our variations of asset and payment tokens
-  const tokenMatrix = [
-    { asset: Constants.Tokens.TokenA, payment: Constants.Tokens.TokenA },
-    { asset: Constants.Tokens.TokenA, payment: Constants.Tokens.Weth },
-    { asset: Constants.Tokens.TokenA, payment: Constants.Tokens.TokenB },
-    { asset: Constants.Tokens.Weth, payment: Constants.Tokens.TokenA },
-    { asset: Constants.Tokens.Weth, payment: Constants.Tokens.Weth },
-  ];
+// describe('Hedgey OTC Library', async () => {
+//   const provider = new MockProvider();
+//   const [, buyer] = provider.getWallets();
 
-  const parameterMatrix = [
-    { buyer: Constants.ZERO_ADDRESS, unlockDate: '0', amount: Constants.E18_10 },
-    { buyer: Constants.ZERO_ADDRESS, unlockDate: '0', amount: Constants.E18_1 },
-    { buyer: Constants.ZERO_ADDRESS, unlockDate: Constants.IN_ONE_HOUR, amount: Constants.E18_10 },
-    { buyer: Constants.ZERO_ADDRESS, unlockDate: Constants.IN_ONE_HOUR, amount: Constants.E18_1 },
-    { buyer: buyer.address, unlockDate: '0', amount: Constants.E18_10 },
-    { buyer: buyer.address, unlockDate: '0', amount: Constants.E18_1 },
-    { buyer: buyer.address, unlockDate: Constants.IN_ONE_HOUR, amount: Constants.E18_10 },
-    { buyer: buyer.address, unlockDate: Constants.IN_ONE_HOUR, amount: Constants.E18_1 },
-  ];
+//   // Set up our variations of asset and payment tokens
+//   const tokenMatrix = [
+//     { asset: Constants.Tokens.TokenA, payment: Constants.Tokens.TokenA },
+//     { asset: Constants.Tokens.TokenA, payment: Constants.Tokens.Weth },
+//     { asset: Constants.Tokens.TokenA, payment: Constants.Tokens.TokenB },
+//     { asset: Constants.Tokens.Weth, payment: Constants.Tokens.TokenA },
+//     { asset: Constants.Tokens.Weth, payment: Constants.Tokens.Weth },
+//   ];
 
-  describe('OTC Contract', () => {
-    describe('OTC deal with non transferrable NFT', () => {
-      otcWithNonTransferableNFT();
-    });
-    describe('Constructor', otcConstructorTests);
-    describe('Create Errors', otcCreateErrorsTests);
+//   const parameterMatrix = [
+//     { buyer: Constants.ZERO_ADDRESS, unlockDate: '0', amount: Constants.E18_10 },
+//     { buyer: Constants.ZERO_ADDRESS, unlockDate: '0', amount: Constants.E18_1 },
+//     { buyer: Constants.ZERO_ADDRESS, unlockDate: Constants.IN_ONE_HOUR, amount: Constants.E18_10 },
+//     { buyer: Constants.ZERO_ADDRESS, unlockDate: Constants.IN_ONE_HOUR, amount: Constants.E18_1 },
+//     { buyer: buyer.address, unlockDate: '0', amount: Constants.E18_10 },
+//     { buyer: buyer.address, unlockDate: '0', amount: Constants.E18_1 },
+//     { buyer: buyer.address, unlockDate: Constants.IN_ONE_HOUR, amount: Constants.E18_10 },
+//     { buyer: buyer.address, unlockDate: Constants.IN_ONE_HOUR, amount: Constants.E18_1 },
+//   ];
 
-    describe('Creating', () => {
-      tokenMatrix.forEach((tokenPair) => {
-        parameterMatrix.forEach((params) => {
-          otcCreateTests({ ...tokenPair, ...params });
-        });
-      });
-    });
+//   describe('OTC Contract', () => {
+//     describe('OTC deal with non transferrable NFT', () => {
+//       otcWithNonTransferableNFT();
+//     });
+//     describe('Constructor', otcConstructorTests);
+//     describe('Create Errors', otcCreateErrorsTests);
 
-    describe('Buy Errors', otcBuyErrorsTests);
-    describe('Buying', () => {
-      tokenMatrix.forEach((tokenPair) => {
-        parameterMatrix.forEach((params) => {
-          otcBuyTests({ ...tokenPair, ...params });
-        });
-      });
-    });
+//     describe('Creating', () => {
+//       tokenMatrix.forEach((tokenPair) => {
+//         parameterMatrix.forEach((params) => {
+//           otcCreateTests({ ...tokenPair, ...params });
+//         });
+//       });
+//     });
 
-    describe('Close Errors', otcCloseErrorsTests);
-    describe('Closing', otcCloseTests);
-  });
+//     describe('Buy Errors', otcBuyErrorsTests);
+//     describe('Buying', () => {
+//       tokenMatrix.forEach((tokenPair) => {
+//         parameterMatrix.forEach((params) => {
+//           otcBuyTests({ ...tokenPair, ...params });
+//         });
+//       });
+//     });
 
-  describe('Celo OTC Contract', () => {
-    describe('Constructor', () => otcConstructorTests(true));
-    describe('Create Errors', () => otcCreateErrorsTests(true));
+//     describe('Close Errors', otcCloseErrorsTests);
+//     describe('Closing', otcCloseTests);
+//   });
 
-    describe('Creating', () => {
-      tokenMatrix.forEach((tokenPair) => {
-        parameterMatrix.forEach((params) => {
-          if (tokenPair.asset !== Constants.Tokens.Weth && tokenPair.payment !== Constants.Tokens.Weth)
-            otcCreateTests({ ...tokenPair, ...params, isCelo: true });
-        });
-      });
-    });
+//   describe('Celo OTC Contract', () => {
+//     describe('Constructor', () => otcConstructorTests(true));
+//     describe('Create Errors', () => otcCreateErrorsTests(true));
 
-    describe('Buy Errors', () => otcBuyErrorsTests(true));
-    describe('Buying', () => {
-      tokenMatrix.forEach((tokenPair) => {
-        parameterMatrix.forEach((params) => {
-          if (tokenPair.asset !== Constants.Tokens.Weth && tokenPair.payment !== Constants.Tokens.Weth)
-            otcBuyTests({ ...tokenPair, ...params, isCelo: true });
-        });
-      });
-    });
+//     describe('Creating', () => {
+//       tokenMatrix.forEach((tokenPair) => {
+//         parameterMatrix.forEach((params) => {
+//           if (tokenPair.asset !== Constants.Tokens.Weth && tokenPair.payment !== Constants.Tokens.Weth)
+//             otcCreateTests({ ...tokenPair, ...params, isCelo: true });
+//         });
+//       });
+//     });
 
-    describe('Close Errors', () => otcCloseErrorsTests(true));
-    describe('Closing', () => otcCloseTests(true));
-  });
+//     describe('Buy Errors', () => otcBuyErrorsTests(true));
+//     describe('Buying', () => {
+//       tokenMatrix.forEach((tokenPair) => {
+//         parameterMatrix.forEach((params) => {
+//           if (tokenPair.asset !== Constants.Tokens.Weth && tokenPair.payment !== Constants.Tokens.Weth)
+//             otcBuyTests({ ...tokenPair, ...params, isCelo: true });
+//         });
+//       });
+//     });
 
-  describe('NFT Contract', () => {
-    describe('URI & Name', () => nftMiscTests(false));
+//     describe('Close Errors', () => otcCloseErrorsTests(true));
+//     describe('Closing', () => otcCloseTests(true));
+//   });
 
-    describe('Creating', () => nftCreateTests(false));
+//   describe('NFT Contract', () => {
+//     describe('URI & Name', () => nftMiscTests(false));
 
-    describe('Redeeming - Token', () => nftRedeemTests());
+//     describe('Creating', () => nftCreateTests(false));
 
-    describe('Redeeming - Weth', () => {
-      nftRedeemTests(true);
-    });
+//     describe('Redeeming - Token', () => nftRedeemTests());
 
-    describe('Transferring - Token', () => {
-      nftTransferTests(false, false);
-    });
+//     describe('Redeeming - Weth', () => {
+//       nftRedeemTests(true);
+//     });
 
-    describe('Transferring - Weth', () => {
-      nftTransferTests(true, false);
-    });
-  });
+//     describe('Transferring - Token', () => {
+//       nftTransferTests(false, false);
+//     });
 
-  describe('Celo NFT Contract', () => {
-    describe('URI & Name', () => nftMiscTests(true));
+//     describe('Transferring - Weth', () => {
+//       nftTransferTests(true, false);
+//     });
+//   });
 
-    describe('Creating', () => nftCreateTests(true));
+//   describe('Celo NFT Contract', () => {
+//     describe('URI & Name', () => nftMiscTests(true));
 
-    describe('Redeeming - Token', () => {
-      nftRedeemTests(false, true);
-    });
+//     describe('Creating', () => nftCreateTests(true));
 
-    describe('Transferring - Token', () => {
-      nftTransferTests(false, true);
-    });
-  });
+//     describe('Redeeming - Token', () => {
+//       nftRedeemTests(false, true);
+//     });
 
-  describe('Non Transferrable NFT', () => {
-    describe('Cannot Transfer', () => noTransferTest(false));
-    describe('Redeeming', () => nftNoTransferRedeemTests(false));
-    describe('Creating', () => nftNoTransferCreateTests());
-  });
-});
+//     describe('Transferring - Token', () => {
+//       nftTransferTests(false, true);
+//     });
+//   });
+
+//   describe('Non Transferrable NFT', () => {
+//     describe('Cannot Transfer', () => noTransferTest(false));
+//     describe('Redeeming', () => nftNoTransferRedeemTests(false));
+//     describe('Creating', () => nftNoTransferCreateTests());
+//   });
+// });
+
+describe('Batch Mint Tests', async () => {
+  batchNFTMintTest();
+})

@@ -28,7 +28,7 @@
     "eslint-plugin-promise": "^5.2.0",
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.6.0",
-    "hardhat": "^2.9.1",
+    "hardhat": "^2.12.5",
     "hardhat-gas-reporter": "^1.0.8",
     "moment": "^2.29.4",
     "prettier": "^2.5.1",
@@ -40,6 +40,7 @@
     "typescript-eslint": "^0.0.1-alpha.0"
   },
   "dependencies": {
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.7",
     "@nomiclabs/hardhat-web3": "^2.0.0",
     "bignumber.js": "^9.0.2",
     "ethereumjs-common": "^1.5.2",
