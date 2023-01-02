@@ -48,3 +48,7 @@ Hedgeys Deployments on below mainnets, with the NonTransferrableNFT where noted:
 - Binance Smart Chain 
 - Celo
 - Boba network
+- Optimism
+- Arbitrum
+- Evmos
+- OEC (OkEx Chain)
