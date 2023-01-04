@@ -27,9 +27,9 @@ To deploy the contracts, use your preferred web3 deployment script. When deployi
 2. await the NFT contract deployment and then deploy the OTC contract with the WETH address and the newly confirmed NFT contract address for second constructor param  
 3. call the function 'updateBaseURI' immediately after the NFT contract has been deployed with the URL that you use (for hedgey its https://nfts.hedgey.finance/${nft_address}),  
   ensuring that the uri is immediately set - now it cannot be reset by anyone again. This prevents unneccessary risks of having an admin address continue to manage the baseURI.  
+4. For Deployting the BatchNFTMinter.sol contract, there are no constructor arguments necessary, as this contract can point to any of the deployed Hedgeys NFT contracts, it can simply be deployed via deployment script. 
 
-
-## Active Mainnet Deployments  
+## Active Mainnet NFT and OTC Deployments  
 Deployed from commit hash `06a3c29c3b0ad0b2347aba9d858e044f1de59edb`  
 All of the smart contracts on production mainnets have been deployed at the same addresses below:  
 Hedgeys (Futures.sol): `0x2AA5d15Eb36E5960d056e8FeA6E7BB3e2a06A351`    
@@ -52,3 +52,5 @@ Hedgeys Deployments on below mainnets, with the NonTransferrableNFT where noted:
 - Arbitrum
 - Evmos
 - OEC (OkEx Chain)
+
+
