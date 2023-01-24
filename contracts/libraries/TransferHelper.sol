@@ -56,14 +56,8 @@ library TransferHelper {
   ) internal {
     if (token == weth) {
       require(msg.value == amount, 'THL03');
-      if (!Address.isContract(to)) {
-        (bool success, ) = to.call{value: amount}('');
-        require(success, 'THL04');
-      } else {
-        /// @dev we want to deliver WETH from ETH here for better handling at contract
-        IWETH(weth).deposit{value: amount}();
-        assert(IWETH(weth).transfer(to, amount));
-      }
+      (bool success, ) = to.call{value: amount}('');
+      require(success, 'THL04');
     } else {
       transferTokens(token, from, to, amount);
     }
