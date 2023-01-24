@@ -3,6 +3,7 @@ pragma solidity 0.8.13;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import '@openzeppelin/contracts/utils/Address.sol';
 import '../interfaces/IWETH.sol';
 
 /// @notice Library to help safely transfer tokens and handle ETH wrapping and unwrapping of WETH
@@ -56,8 +57,14 @@ library TransferHelper {
   ) internal {
     if (token == weth) {
       require(msg.value == amount, 'THL03');
-      (bool success, ) = to.call{value: amount}('');
-      require(success, 'THL04');
+      if (!Address.isContract(to)) {
+        (bool success, ) = to.call{value: amount}('');
+        require(success, 'THL04');
+      } else {
+        /// @dev we want to deliver WETH from ETH here for better handling at contract
+        IWETH(weth).deposit{value: amount}();
+        assert(IWETH(weth).transfer(to, amount));
+      }
     } else {
       transferTokens(token, from, to, amount);
     }
