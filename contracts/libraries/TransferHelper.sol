@@ -63,7 +63,7 @@ library TransferHelper {
     }
   }
 
-  /// @dev Internal funciton that handles withdrawing tokens and WETH that are up for sale to buyers
+  /// @dev Internal function that handles withdrawing tokens and WETH that are up for sale to buyers
   /// @dev this function is only called if the tokens are not timelocked
   /// @dev this function handles weth specially and delivers ETH to the recipient
   function withdrawPayment(
