@@ -4,7 +4,7 @@ pragma solidity 0.8.13;
 import './libraries/TransferHelper.sol';
 import './interfaces/INFT.sol';
 
-/// @notice basic smart contract to allow minting of Hedgeys NFTs in batches
+// @notice basic smart contract to allow minting of Hedgeys NFTs in batches
 contract BatchNFTMinter {
   event BatchMinted(uint256 mintType);
 

@@ -117,7 +117,7 @@ export default () => {
         unlockDates,
         '55'
       )
-    ).to.be.revertedWith('array size wrong');
+    ).to.be.revertedWith('array error');
     //change unlocks to match holders, different than amounts size
     unlockDates = [unlock, unlock];
     await expect(
@@ -129,7 +129,7 @@ export default () => {
         unlockDates,
         '55'
       )
-    ).to.be.revertedWith('array size wrong');
+    ).to.be.revertedWith('array error');
     unlockDates = [unlock, unlock, unlock];
     await expect(
       batchMinter['batchMint(address,address[],address,uint256[],uint256[],uint256)'](
@@ -140,7 +140,7 @@ export default () => {
         unlockDates,
         '55'
       )
-    ).to.be.revertedWith('array size wrong');
+    ).to.be.revertedWith('array error');
   });
   it('Reverts if the token is the 0 address token', async () => {
     const fixture = await batchMintFixture();
@@ -181,7 +181,7 @@ export default () => {
         unlockDates,
         '55'
       )
-    ).to.be.revertedWith('cant mint with 0');
+    ).to.be.revertedWith('amount error');
   });
   it('Reverts if the unlock date is in the past', async () => {
     const fixture = await batchMintFixture();
@@ -202,6 +202,6 @@ export default () => {
         unlockDates,
         '55'
       )
-    ).to.be.revertedWith('must be in the future');
+    ).to.be.revertedWith('date error');
   });
 };
