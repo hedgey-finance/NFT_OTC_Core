@@ -3,6 +3,7 @@ pragma solidity 0.8.13;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import '@openzeppelin/contracts/utils/Address.sol';
 import '../interfaces/IWETH.sol';
 
 /// @notice Library to help safely transfer tokens and handle ETH wrapping and unwrapping of WETH
@@ -69,7 +70,7 @@ library TransferHelper {
     }
   }
 
-  /// @dev Internal funciton that handles withdrawing tokens and WETH that are up for sale to buyers
+  /// @dev Internal function that handles withdrawing tokens and WETH that are up for sale to buyers
   /// @dev this function is only called if the tokens are not timelocked
   /// @dev this function handles weth specially and delivers ETH to the recipient
   function withdrawPayment(

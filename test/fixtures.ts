@@ -8,6 +8,7 @@ import { deployWeth } from '@thenextblock/hardhat-weth';
 import Token from '../artifacts/contracts/test/Token.sol/Token.json';
 import NFT from '../artifacts/contracts/FuturesNFT.sol/Hedgeys.json';
 import NoTransferNFT from '../artifacts/contracts/NonTransferrableNFT.sol/NonTransferrableNFTs.json';
+import BatchMinter from '../artifacts/contracts/BatchNFTMinter.sol/BatchNFTMinter.json';
 import CeloNFT from '../artifacts/contracts/CeloFuturesNFT.sol/CeloHedgeys.json';
 import BurnToken from '../artifacts/contracts/test/BurnToken.sol/BurnToken.json';
 import FakeToken from '../artifacts/contracts/test/FakeToken.sol/FakeToken.json';
@@ -299,4 +300,37 @@ export async function createdNoTransferNFTFixture(
   }
 
   return { nft, token, weth };
+}
+
+export async function batchMintFixture() {
+  const [minter, reciever] = await ethers.getSigners();
+  const weth = await deployWeth(minter);
+  
+  const NFT = await ethers.getContractFactory('Hedgeys');
+  const baseUrl = Constants.nftBaseUrl;
+  const nft = await NFT.deploy(weth.address, baseUrl);
+
+  const BatchMinter = await ethers.getContractFactory('BatchNFTMinter');
+  const batchMinter = await BatchMinter.deploy();
+
+
+  const Token = await ethers.getContractFactory('Token');
+  const BurnToken = await ethers.getContractFactory('BurnToken');
+
+  const token = await Token.deploy(Constants.E18_1000, 18);
+  const burn = await BurnToken.deploy('BURN', 'BURN');
+  await burn.deployed();
+  await burn.mint(Constants.E18_1000);
+  
+  await token.approve(batchMinter.address, Constants.E18_1000);
+  await burn.approve(batchMinter.address, Constants.E18_1000);
+
+  return {
+    minter,
+    reciever,
+    nft,
+    batchMinter,
+    token,
+    burn
+  }
 }

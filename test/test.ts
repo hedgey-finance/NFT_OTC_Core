@@ -21,6 +21,8 @@ import nftNoTransferRedeemTests from './tests/nftNoTransferRedeem.spec';
 
 import otcWithNonTransferableNFT from './tests/otcNoTransfer.spec';
 
+import batchNFTMintTest from './tests/batchNFTMint.spec';
+
 describe('Hedgey OTC Library', async () => {
   const provider = new MockProvider();
   const [, buyer] = provider.getWallets();
@@ -140,3 +142,7 @@ describe('Hedgey OTC Library', async () => {
     describe('Creating', () => nftNoTransferCreateTests());
   });
 });
+
+describe('Batch Mint Tests', async () => {
+  batchNFTMintTest();
+})
